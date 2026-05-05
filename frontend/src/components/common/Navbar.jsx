@@ -33,7 +33,7 @@ const Navbar = () => {
 
         <div className="flex items-center gap-6">
           <button className="material-symbols-outlined text-zinc-900 hover:bg-zinc-100 p-2 rounded-full transition-all duration-200">shopping_cart</button>
-          <button className="material-symbols-outlined text-zinc-900 hover:bg-zinc-100 p-2 rounded-full transition-all duration-200">person</button>
+          <Link to="/login" className="material-symbols-outlined text-zinc-900 hover:bg-zinc-100 p-2 rounded-full transition-all duration-200">person</Link>
         </div>
       </div>
     </nav>
