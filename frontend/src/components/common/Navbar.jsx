@@ -8,7 +8,7 @@ const Navbar = () => {
     { name: 'EXPLORE', path: '/explore' },
     { name: 'FLASH SALE', path: '/flash-sale' },
     { name: 'ATHLETES', path: '/athletes' },
-    { name: 'TECH', path: '#' },
+    { name: 'TECH', path: '/technology' },
   ];
 
   return (
