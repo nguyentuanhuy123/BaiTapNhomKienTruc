@@ -1,7 +1,13 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const RegisterPage = () => {
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Simulate successful registration
+    navigate('/verify-email');
+  };
   return (
     <div className="flex min-h-screen bg-white font-body-md">
       {/* Left Side - Inspiration & Stats */}
@@ -58,7 +64,7 @@ const RegisterPage = () => {
             <p className="text-zinc-500">Create your account to unlock personalized performance tracking and early access.</p>
           </div>
 
-          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className="block text-label-md font-bold text-zinc-900 mb-2">Full Name</label>
               <input 
