@@ -6,8 +6,9 @@ const Navbar = () => {
   const navLinks = [
     { name: 'SHOP', path: '/' },
     { name: 'EXPLORE', path: '/explore' },
-    { name: 'ATHLETES', path: '#' },
-    { name: 'TECH', path: '#' },
+    { name: 'FLASH SALE', path: '/flash-sale' },
+    { name: 'ATHLETES', path: '/athletes' },
+    { name: 'TECH', path: '/technology' },
   ];
 
   return (
@@ -32,8 +33,36 @@ const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-6">
-          <button className="material-symbols-outlined text-zinc-900 hover:bg-zinc-100 p-2 rounded-full transition-all duration-200">shopping_cart</button>
-          <button className="material-symbols-outlined text-zinc-900 hover:bg-zinc-100 p-2 rounded-full transition-all duration-200">person</button>
+          <Link to="/cart" className="material-symbols-outlined text-zinc-900 hover:bg-zinc-100 p-2 rounded-full transition-all duration-200">shopping_cart</Link>
+          
+          {/* User Account Dropdown */}
+          <div className="relative group">
+            <button className="material-symbols-outlined text-zinc-900 hover:bg-zinc-100 p-2 rounded-full transition-all duration-200 block">
+              person
+            </button>
+            
+            {/* Dropdown Menu */}
+            <div className="absolute right-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-[100]">
+              <div className="bg-white/80 backdrop-blur-xl border border-zinc-100 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] min-w-[180px] p-2 overflow-hidden">
+                <Link to="/profile" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 rounded-xl transition-all">
+                  <span className="material-symbols-outlined text-lg">account_circle</span>
+                  Profile
+                </Link>
+                <Link to="/login" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 rounded-xl transition-all">
+                  <span className="material-symbols-outlined text-lg">login</span>
+                  Login
+                </Link>
+                <Link to="/register" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 rounded-xl transition-all border-b border-zinc-50">
+                  <span className="material-symbols-outlined text-lg">person_add</span>
+                  Register
+                </Link>
+                <button className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-error hover:bg-error/5 rounded-xl transition-all">
+                  <span className="material-symbols-outlined text-lg">logout</span>
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </nav>

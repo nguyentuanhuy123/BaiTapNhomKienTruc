@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { EXPLORE_PRODUCTS, FILTER_OPTIONS } from '../constants/mockData';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
+import ProductCard from '../components/common/ProductCard';
 
 const ExplorePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -103,34 +105,9 @@ const ExplorePage = () => {
               </div>
             </div>
 
-            {/* Product Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
               {EXPLORE_PRODUCTS.map((product) => (
-                <div key={product.id} className="bg-white rounded-lg p-6 ambient-shadow ambient-shadow-hover group cursor-pointer border border-transparent hover:border-zinc-100 transition-all">
-                  <div className="relative w-full aspect-square rounded-lg bg-zinc-50 mb-6 flex items-center justify-center overflow-hidden">
-                    {product.tag && (
-                      <span className="absolute top-4 left-4 bg-zinc-900 text-white px-3 py-1 rounded-full text-label-sm font-bold uppercase z-10">
-                        {product.tag}
-                      </span>
-                    )}
-                    <img 
-                      alt={product.name} 
-                      className="w-4/5 object-contain group-hover:scale-105 transition-transform duration-500" 
-                      src={product.image} 
-                    />
-                    <button className="absolute bottom-4 right-4 bg-primary-fixed text-primary-container w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0">
-                      <span className="material-symbols-outlined">shopping_cart</span>
-                    </button>
-                  </div>
-                  <h3 className="font-bold text-headline-md text-zinc-900 mb-1">{product.name}</h3>
-                  <p className="text-secondary text-sm mb-4">{product.variant}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-headline-md text-zinc-900">${product.price.toFixed(2)}</span>
-                    <button className="material-symbols-outlined bg-zinc-50 text-zinc-400 w-10 h-10 rounded-full flex items-center justify-center hover:bg-zinc-100 hover:text-zinc-900 transition-all">
-                      favorite
-                    </button>
-                  </div>
-                </div>
+                <ProductCard key={product.id} product={product} />
               ))}
             </div>
 
