@@ -7,6 +7,8 @@ import RegisterPage from './pages/RegisterPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ProductDetailPage from './pages/ProductDetailPage';
+import AthletesPage from './pages/AthletesPage';
+import FlashSalePage from './pages/FlashSalePage';
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/product/:id" element={<ProductDetailPage />} />
+          <Route path="/athletes" element={<AthletesPage />} />
+          <Route path="/flash-sale" element={<FlashSalePage />} />
         </Routes>
       </div>
     </Router>
