@@ -1,5 +1,6 @@
 import React from 'react';
 import { FLASH_SALE_PRODUCTS } from '../../constants/mockData';
+import { Link } from 'react-router-dom';
 import Button from '../common/Button';
 import ProductCard from '../common/ProductCard';
 
@@ -7,18 +8,45 @@ const FlashSale = () => {
   return (
     <section className="py-section-gap px-margin-mobile md:px-margin-desktop relative overflow-hidden bg-[#FF3B30]/5">
       <div className="max-w-container-max mx-auto relative z-10">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6 text-center md:text-left">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-error text-white text-label-sm rounded-full font-bold uppercase tracking-widest mb-4">
-              <span className="material-symbols-outlined text-sm">bolt</span> Flash Sale
-            </div>
-            <h2 className="font-space-grotesk font-black text-headline-xl text-zinc-900 leading-none mb-2 uppercase">Limited Time Offers</h2>
+        {/* New Blue Banner Header */}
+        <div className="bg-primary-container rounded-[40px] p-10 md:p-14 mb-16 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-10">
+          {/* Background Silhouette Shoe */}
+          <div className="absolute right-0 top-0 h-full w-2/3 pointer-events-none opacity-20 transform translate-x-1/4 scale-125">
+            <img 
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlNG2P_20pGAAH4lD1LeB5XUPjnnrFc1Iqelb0yK_m5pU8LBE-r1o2Qc0s98A3ibTFLgTBWkOL_Of5_oOH0uULbeky0x39_KUNX_WWNODTJMDKHAAG_xht_x1U0gWH71RRXbW_ZtO1ozzj1yI-3cDWy7ha4kOLfSxqzcFYN7BgdKbZ3lfnDHt2k0E7f0EimKNABOUGiiHM7MyaiARflxSGkXj5a0rOM8LI-ylmoHgcPxKHEJvRV5XyWWxtRcZzNNk7Ff5qopsRjeM" 
+              alt="Silhouette" 
+              className="h-full w-full object-contain mix-blend-overlay"
+            />
           </div>
-          
-          <div className="px-8 py-4 rounded-xl ambient-shadow border bg-[#FF3B30] border-[#FF3B30]/20 shadow-[0_15px_30px_-5px_rgba(255,59,48,0.3)]">
-            <p className="text-label-sm text-white/80 uppercase tracking-widest mb-1">Ending in:</p>
-            <div className="font-space-grotesk font-bold text-headline-md text-white tracking-wider">
-              02<span className="text-white/60 font-normal mx-1">h</span> 45<span className="text-white/60 font-normal mx-1">m</span> 12<span className="text-white/60 font-normal mx-1">s</span>
+
+          <div className="relative z-10 max-w-lg">
+            <span className="bg-white/20 backdrop-blur-md text-white text-[10px] px-4 py-1.5 rounded-full font-bold uppercase tracking-widest mb-6 inline-block border border-white/10">
+              Limited Time Only
+            </span>
+            <h2 className="text-white text-5xl md:text-6xl font-space-grotesk font-black mb-6 leading-none italic uppercase">Flash Sale</h2>
+            <p className="text-white/80 text-lg leading-relaxed">
+              Our highest performance silhouettes at their lowest prices ever. 
+              <span className="text-white font-bold italic"> Engineered for speed, priced for now.</span>
+            </p>
+          </div>
+
+          {/* Glassmorphism Countdown Box */}
+          <div className="relative z-10 bg-white/10 backdrop-blur-xl border border-white/20 rounded-[32px] p-8 md:p-10 flex flex-col items-center min-w-[320px] shadow-2xl">
+            <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.3em] mb-8">Sale Ends In</p>
+            <div className="flex items-center gap-6">
+              {[
+                { val: '04', label: 'HOURS' },
+                { val: '22', label: 'MINS' },
+                { val: '15', label: 'SECS' }
+              ].map((t, i) => (
+                <React.Fragment key={i}>
+                  <div className="flex flex-col items-center">
+                    <span className="text-white text-4xl md:text-5xl font-black font-space-grotesk italic mb-2 tracking-tighter">{t.val}</span>
+                    <span className="text-white/40 text-[8px] font-black uppercase tracking-widest">{t.label}</span>
+                  </div>
+                  {i < 2 && <span className="text-white/20 text-3xl font-black mb-6">:</span>}
+                </React.Fragment>
+              ))}
             </div>
           </div>
         </div>
@@ -30,7 +58,9 @@ const FlashSale = () => {
         </div>
 
         <div className="text-center">
-          <Button variant="outline">View All Flash Deals</Button>
+          <Link to="/flash-sale">
+            <Button variant="outline">View All Flash Deals</Button>
+          </Link>
         </div>
       </div>
       

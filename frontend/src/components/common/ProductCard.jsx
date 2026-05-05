@@ -35,10 +35,17 @@ const ProductCard = ({ product, className = "" }) => {
         </p>
       </div>
 
-      <div className="flex justify-between items-center mt-4">
-        <span className="font-black text-headline-md text-zinc-900 italic">
-          ${product.price.toFixed(2)}
-        </span>
+      <div className="flex justify-between items-end mt-4">
+        <div className="flex flex-col">
+          {product.originalPrice && (
+            <span className="text-zinc-400 line-through text-[10px] font-bold">
+              ${product.originalPrice.toFixed(2)}
+            </span>
+          )}
+          <span className={`font-black text-headline-md italic ${product.originalPrice ? 'text-error' : 'text-zinc-900'}`}>
+            ${product.price.toFixed(2)}
+          </span>
+        </div>
         <button className="material-symbols-outlined text-zinc-300 w-8 h-8 rounded-full flex items-center justify-center hover:bg-zinc-50 hover:text-red-500 transition-all text-xl">
           favorite
         </button>
