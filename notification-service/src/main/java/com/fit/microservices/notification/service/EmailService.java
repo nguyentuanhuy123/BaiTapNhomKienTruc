@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 
+import static org.apache.kafka.common.requests.FetchMetadata.log;
+
 @Service
 @RequiredArgsConstructor
 public class EmailService {
@@ -126,6 +128,114 @@ public class EmailService {
             System.err.println("❌ Send email failed: " + e.getMessage());
         }
     }
+    // Trong EmailService.java
+    public void sendPasswordResetEmail(String toEmail, String resetToken) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
+            helper.setFrom("hello@demomailtrap.co");
+            helper.setTo(toEmail);
+            helper.setSubject("🔐 Reset your password");
+
+            // Thay đổi URL này thành đường dẫn Frontend thực tế của bạn
+            String resetLink = "http://localhost:3001/reset-password?token=" + resetToken;
+
+            // Chuyển đổi template JS sang định dạng Java String với biến resetLink
+            String htmlContent = """
+                <div style="font-family: Arial; background:#0f172a; padding:40px; color:white;">
+                    <div style="max-width:500px;margin:auto;background:#1e293b;padding:30px;border-radius:10px;">
+                        
+                        <h2 style="text-align:center; color:white;">🔐 Reset your password</h2>
+                
+                        <p style="color:white;">Looks like you forgot your password.</p>
+                
+                        <p style="color:white;">Click the button below to reset it:</p>
+                
+                        <div style="text-align:center;margin:30px 0;">
+                            <a href="%s" 
+                               style="background:#5865f2;color:white;padding:12px 20px;
+                                      text-decoration:none;border-radius:5px;font-weight:bold;display:inline-block;">
+                                Reset Password
+                            </a>
+                        </div>
+                
+                        <p style="font-size:12px;color:#94a3b8;">
+                            This link will expire in 15 minutes.
+                        </p>
+                
+                        <p style="font-size:12px;color:#94a3b8;">
+                            If you didn't request this, ignore this email.
+                        </p>
+                    </div>
+                </div>
+                """.formatted(resetLink);
+
+            helper.setText(htmlContent, true); // true để gửi dưới dạng HTML
+
+            mailSender.send(message);
+            System.out.println("📧 Reset password email sent to " + toEmail);
+
+        } catch (MessagingException e) {
+            System.err.println("❌ Send reset email failed: " + e.getMessage());
+        }
+    }
+    public void sendOtpEmail(String toEmail, String otp) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom("hello@demomailtrap.co"); // Đảm bảo khớp với các method khác của bạn
+            helper.setTo(toEmail);
+            helper.setSubject("🔑 Mã xác thực đăng nhập (OTP)");
+
+            // Template được copy chính xác từ bản JS của bạn
+            String htmlContent = """
+            <div style="font-family: Arial; background:#0f172a; padding:40px; color:white;">
+                <div style="max-width:500px;margin:auto;background:#1e293b;padding:30px;border-radius:10px;">
+            
+                    <h2 style="text-align:center; color:white;">🔐 Verify your login</h2>
+            
+                    <p style="color:white;">We detected a login attempt to your account.</p>
+            
+                    <p style="color:white;">Please use the OTP code below to continue:</p>
+            
+                    <div style="text-align:center;margin:30px 0;">
+                        <span style="
+                            display:inline-block;
+                            background:#5865f2;
+                            color:white;
+                            padding:15px 25px;
+                            font-size:24px;
+                            letter-spacing:4px;
+                            border-radius:8px;
+                            font-weight:bold;
+                        ">
+                            %s
+                        </span>
+                    </div>
+            
+                    <p style="text-align:center; font-size:14px; color:white;">
+                        This code will expire in <b>5 minutes</b>.
+                    </p>
+            
+                    <p style="font-size:12px;color:#94a3b8;">
+                        If this wasn't you, please secure your account immediately.
+                    </p>
+            
+                </div>
+            </div>
+            """.formatted(otp);
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+
+            System.out.println("📧 OTP email sent to " + toEmail);
+
+        } catch (Exception e) {
+            // Sử dụng log.error như trong code cũ của bạn
+            log.error("❌ Lỗi gửi OTP email: {}", e.getMessage());
+        }
+    }
 }
 

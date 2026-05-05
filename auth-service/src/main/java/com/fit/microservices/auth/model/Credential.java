@@ -18,4 +18,7 @@ public class Credential {
     private String email;
     private String password;
     private String role;
+
+    @Column(length = 500)
+    private String refreshToken;
 }

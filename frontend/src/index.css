@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-on-background font-body-md overflow-x-hidden;
+  }
+}
+
+@layer components {
+  .glass-surface {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .ambient-shadow {
+    box-shadow: 0 10px 40px -10px rgba(0, 82, 255, 0.1), 0 4px 10px -4px rgba(0, 82, 255, 0.05);
+  }
+
+  .ambient-shadow-hover {
+    @apply transition-all duration-300;
+  }
+
+  .ambient-shadow-hover:hover {
+    box-shadow: 0 20px 50px -12px rgba(0, 82, 255, 0.15);
+    transform: translateY(-8px);
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 6s ease-in-out infinite;
+}
