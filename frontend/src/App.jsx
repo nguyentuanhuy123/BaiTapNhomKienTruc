@@ -11,6 +11,8 @@ import AthletesPage from './pages/AthletesPage';
 import FlashSalePage from './pages/FlashSalePage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
+import ProfilePage from './pages/ProfilePage';
+import OrdersPage from './pages/OrdersPage';
 
 function App() {
   return (
@@ -28,6 +30,8 @@ function App() {
           <Route path="/flash-sale" element={<FlashSalePage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/orders" element={<OrdersPage />} />
         </Routes>
       </div>
     </Router>
