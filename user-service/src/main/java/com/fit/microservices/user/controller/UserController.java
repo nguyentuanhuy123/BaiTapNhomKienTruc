@@ -5,6 +5,7 @@ import com.fit.microservices.user.dto.UserResponse;
 import com.fit.microservices.user.model.User;
 import com.fit.microservices.user.repository.UserRepository;
 import com.fit.microservices.user.service.UserService;
+import com.fit.microservices.user.service.UserStatusService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -13,7 +14,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 @Tag(name = "User API", description = "Operations related to users")
 @RestController
 @RequestMapping("/api/user")
@@ -21,6 +25,7 @@ import java.util.List;
 public class UserController {
     private final UserService userService;
     private final UserRepository userRepository;
+    private final UserStatusService userStatusService;
     @Operation(summary = "Get user by ID")
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUserById(@PathVariable Long id){
@@ -42,5 +47,17 @@ public class UserController {
                 .build();
         userRepository.save(user);
         return new UserResponse(user.getId());
+    }
+    @Operation(summary = "Check if a user is online")
+    @GetMapping("/{id}/online-status")
+    public ResponseEntity<Map<String, Object>> checkUserOnline(@PathVariable Long id) {
+        boolean isOnline = userStatusService.isUserOnline(id);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("userId", id);
+        response.put("isOnline", isOnline);
+        response.put("status", isOnline ? "ONLINE" : "OFFLINE");
+
+        return ResponseEntity.ok(response);
     }
 }

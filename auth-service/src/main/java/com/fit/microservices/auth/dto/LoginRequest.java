@@ -15,4 +15,8 @@ public class LoginRequest {
 
     @NotBlank(message = "Password không được để trống")
     private String password;
+
+    private String deviceId;
+    private String deviceName;
+    private String ipAddress;
 }
