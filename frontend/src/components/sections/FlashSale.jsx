@@ -1,6 +1,7 @@
 import React from 'react';
 import { FLASH_SALE_PRODUCTS } from '../../constants/mockData';
 import Button from '../common/Button';
+import ProductCard from '../common/ProductCard';
 
 const FlashSale = () => {
   return (
@@ -24,29 +25,7 @@ const FlashSale = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-12">
           {FLASH_SALE_PRODUCTS.map((product) => (
-            <div key={product.id} className="bg-white rounded-lg p-6 ambient-shadow ambient-shadow-hover group">
-              <div className="relative w-full aspect-square rounded-lg bg-background mb-6 flex items-center justify-center overflow-hidden">
-                <span className="absolute top-4 left-4 bg-error text-white px-3 py-1 rounded-full text-label-sm font-bold uppercase z-10">
-                  {product.discount}
-                </span>
-                <img 
-                  alt={product.name} 
-                  className="w-4/5 object-contain group-hover:scale-110 transition-transform duration-500" 
-                  src={product.image} 
-                />
-              </div>
-              <h3 className="font-headline-md text-zinc-900 mb-1">{product.name}</h3>
-              <p className="text-secondary mb-4">{product.variant}</p>
-              <div className="flex justify-between items-center">
-                <div className="flex flex-col">
-                  <span className="text-secondary line-through text-label-md">${product.originalPrice.toFixed(2)}</span>
-                  <span className="font-bold text-headline-md text-error">${product.price.toFixed(2)}</span>
-                </div>
-                <button className="material-symbols-outlined bg-zinc-900 text-white w-12 h-12 rounded-full flex items-center justify-center transition-all hover:bg-[#FF3B30] hover:rotate-90">
-                  add
-                </button>
-              </div>
-            </div>
+            <ProductCard key={product.id} product={product} />
           ))}
         </div>
 
