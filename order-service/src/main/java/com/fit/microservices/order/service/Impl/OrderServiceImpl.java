@@ -33,6 +33,7 @@ public class OrderServiceImpl implements OrderService {
     private final InventoryClient  inventoryClient;
     private final UserClient  userClient;
     private final OrderEventProducer orderEventProducer;
+
     @Override
     public String placeOrder(OrderRequest orderRequest,Long userId) {
         Order order = new Order();
@@ -90,7 +91,8 @@ public class OrderServiceImpl implements OrderService {
                     itemDto.setPrice(item.getPrice());
                     return itemDto;
                 }).toList();
-        UserResponse userResponse = userClient.getUserById(order.getUserId());
+//        UserResponse userResponse = userClient.getUserById(order.getUserId());
+            UserResponse userResponse = null;
         return new OrderResponse(order.getId(),order.getOrderNumber(),items,userResponse);
     }
     private List<OrderCancelEvent.OrderItem> mapOrderItems(Order order) {
