@@ -29,4 +29,6 @@ public class UserRequest {
 
     @NotBlank(message = "Địa chỉ không được để trống")
     private String address;
+
+    private String avatarUrl;
 }

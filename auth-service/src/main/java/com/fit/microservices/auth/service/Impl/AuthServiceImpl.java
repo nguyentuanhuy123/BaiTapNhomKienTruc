@@ -202,6 +202,7 @@ public class AuthServiceImpl implements AuthService {
         userRequest.setEmail(registerRequest.getEmail());
         userRequest.setPhone(registerRequest.getPhone());
         userRequest.setAddress(registerRequest.getAddress());
+        userRequest.setAvatarUrl("https://ui-avatars.com/api/?name=" + registerRequest.getFullName());
 
         UserResponse userResponse = userClient.createUser(userRequest);
 

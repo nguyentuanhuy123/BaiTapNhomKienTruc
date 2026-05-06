@@ -32,21 +32,23 @@ public class UserController {
         return new ResponseEntity<>(userService.getUserById(id),HttpStatus.OK);
     }
     @GetMapping("/me")
-    public User me(@RequestHeader("X-User-Email") String email) {
-        return userRepository.findByEmail(email)
+    public ResponseEntity<UserResponse> me(@RequestHeader("X-User-Email") String email) {
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(new UserResponse(user));
     }
     @PostMapping
     @Operation(summary = "Create new user")
-    public UserResponse createUser(@Valid  @RequestBody UserRequest request) {
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserRequest request) {
         User user = User.builder()
                 .fullName(request.getFullName())
                 .email(request.getEmail())
                 .phone(request.getPhone())
                 .address(request.getAddress())
+                .avatarUrl(request.getAvatarUrl() != null ? request.getAvatarUrl() : "https://example.com/default-avatar.png")
                 .build();
         userRepository.save(user);
-        return new UserResponse(user.getId());
+        return new ResponseEntity<>(new UserResponse(user), HttpStatus.CREATED);
     }
     @Operation(summary = "Check if a user is online")
     @GetMapping("/{id}/online-status")

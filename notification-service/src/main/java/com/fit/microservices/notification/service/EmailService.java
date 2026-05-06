@@ -139,7 +139,7 @@ public class EmailService {
             helper.setSubject("🔐 Reset your password");
 
             // Thay đổi URL này thành đường dẫn Frontend thực tế của bạn
-            String resetLink = "http://localhost:3001/reset-password?token=" + resetToken;
+            String resetLink = "http://localhost:9000/forgot-password?token=" + resetToken;
 
             // Chuyển đổi template JS sang định dạng Java String với biến resetLink
             String htmlContent = """
