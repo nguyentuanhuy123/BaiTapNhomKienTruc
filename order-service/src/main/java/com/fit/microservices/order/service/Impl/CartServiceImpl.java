@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Locale;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -45,7 +47,7 @@ public class CartServiceImpl implements CartService {
                 });
 
         CartItem existingItem = cart.getItems().stream()
-                .filter(item -> item.getSkuCode().equals(request.getSkuCode()))
+                .filter(item -> isSameVariant(item, request))
                 .findFirst()
                 .orElse(null);
 
@@ -56,12 +58,24 @@ public class CartServiceImpl implements CartService {
             CartItem newItem = new CartItem();
             newItem.setSkuCode(request.getSkuCode());
             newItem.setQuantity(request.getQuantity() == null ? 1 : request.getQuantity());
+            newItem.setSize(request.getSize());
+            newItem.setColor(request.getColor());
             newItem.setCart(cart);
             cart.getItems().add(newItem);
         }
 
         Cart saved = cartRepository.save(cart);
         return CartMapper.toResponse(saved);
+    }
+
+    private boolean isSameVariant(CartItem item, AddCartItemRequest request) {
+        return Objects.equals(normalizeKey(item.getSkuCode()), normalizeKey(request.getSkuCode()))
+                && Objects.equals(normalizeKey(item.getSize()), normalizeKey(request.getSize()))
+                && Objects.equals(normalizeKey(item.getColor()), normalizeKey(request.getColor()));
+    }
+
+    private String normalizeKey(String value) {
+        return value == null ? null : value.trim().toLowerCase(Locale.ROOT);
     }
 
     @Override

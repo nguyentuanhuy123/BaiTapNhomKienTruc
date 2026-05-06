@@ -4,6 +4,9 @@ import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import ProductCard from '../components/common/ProductCard';
 import { productService } from '../services/productService';
+import { useNavigate } from 'react-router-dom';
+import { cartService } from '../services/cartService';
+
 
 const ProductDetailPage = () => {
   const { id } = useParams();
@@ -17,6 +20,26 @@ const ProductDetailPage = () => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState({ content: '', rating: 5, username: '' });
   const [submitting, setSubmitting] = useState(false);
+  const navigate = useNavigate();
+
+  const getUserId = () => {
+    // return Number(localStorage.getItem("userId")) || 123;
+    return 123;
+  };
+
+  const readLocalCart = () => {
+    try {
+      const raw = localStorage.getItem("cart");
+      return raw ? JSON.parse(raw) : { items: [] };
+    } catch {
+      return { items: [] };
+    }
+  };
+
+  const writeLocalCart = (cart) => {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  };
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -94,6 +117,71 @@ const ProductDetailPage = () => {
     */
     setIsLiked(!isLiked); // Keep local UI working
   };
+
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+
+    const userId = getUserId();
+    const skuCode = product.skuCode || `SKU-${product.id}`;
+
+    try {
+      // 1) Sync to backend cart
+      const updated = await cartService.addItem({
+        userId,
+        skuCode,
+        quantity: 1,
+        size: selectedSize || "N/A",
+        color: selectedColor || "N/A",
+      });
+
+      const normalizeKey = (value) => (value == null ? "" : String(value).trim().toLowerCase());
+      const matched = updated?.items?.find(
+        (it) =>
+          normalizeKey(it.skuCode) === normalizeKey(skuCode) &&
+          normalizeKey(it.size) === normalizeKey(selectedSize || "N/A") &&
+          normalizeKey(it.color) === normalizeKey(selectedColor || "N/A")
+      );
+
+      // 2) Build local cart item for UI display
+      const localCart = readLocalCart();
+      const existing = localCart.items.find(
+          (it) =>
+              it.skuCode === skuCode &&
+              it.size === selectedSize &&
+              it.color === selectedColor
+      );
+
+      if (existing) {
+        existing.quantity += 1;
+        if (matched?.id != null) {
+          existing.backendItemId = matched.id;
+        }
+      } else {
+        localCart.items.push({
+          id: `local-${product.id}-${selectedSize}-${selectedColor}`,
+          backendItemId: matched?.id ?? null,
+          productId: product.id,
+          skuCode,
+          name: product.name,
+          price: product.price || 0,
+          image: product.imageResponses?.[0]?.url || product.image || "",
+          size: selectedSize || "N/A",
+          color: selectedColor || "N/A",
+          quantity: 1,
+        });
+      }
+
+      localCart.updatedAt = new Date().toISOString();
+      writeLocalCart(localCart);
+
+      // 3) Redirect to cart page
+      navigate("/cart");
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -221,7 +309,9 @@ const ProductDetailPage = () => {
               </div>
 
               <div className="flex gap-4">
-                <button className="flex-1 bg-primary-container text-white font-bold py-5 rounded-2xl shadow-[0_15px_30px_-5px_rgba(0,82,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 mb-8">
+                <button
+                    onClick={handleAddToCart}
+                    className="flex-1 bg-primary-container text-white font-bold py-5 rounded-2xl shadow-[0_15px_30px_-5px_rgba(0,82,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 mb-8">
                   <span className="material-symbols-outlined">shopping_bag</span>
                   ADD TO BAG
                 </button>

@@ -27,6 +27,8 @@ public final class CartMapper {
                         .id(i.getId())
                         .skuCode(i.getSkuCode())
                         .quantity(i.getQuantity())
+                        .size(i.getSize())
+                        .color(i.getColor())
                         .build())
                 .toList();
 
@@ -45,4 +47,3 @@ public final class CartMapper {
                 .build();
     }
 }
-

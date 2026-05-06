@@ -19,6 +19,8 @@ public class CartItem {
     @Column(nullable = false)
     private String skuCode;
     private Integer quantity;
+    private String size;
+    private String color;
     @ManyToOne
     @JoinColumn(name = "cart_id")
     private Cart cart;

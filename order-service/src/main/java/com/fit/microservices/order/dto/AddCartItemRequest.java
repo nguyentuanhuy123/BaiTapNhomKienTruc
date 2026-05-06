@@ -13,4 +13,6 @@ public class AddCartItemRequest {
     private Long userId;
     private String skuCode;
     private Integer quantity;
+    private String size;
+    private String color;
 }
