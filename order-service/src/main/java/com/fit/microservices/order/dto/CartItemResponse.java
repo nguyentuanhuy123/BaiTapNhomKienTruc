@@ -1,16 +1,16 @@
 package com.fit.microservices.order.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
-@AllArgsConstructor
+@Data
+@Builder
 @NoArgsConstructor
-public class AddCartItemRequest {
-    private Long userId;
+@AllArgsConstructor
+public class CartItemResponse {
+    private Long id;
     private String skuCode;
     private Integer quantity;
     private String size;
