@@ -1,30 +1,57 @@
-import React, { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import authApi from '../api/authApi'; 
+import { useAlert } from '../contexts/AlertContext'; // Thay đổi đường dẫn import này cho đúng với file của bạn
 
 const ForgotPasswordPage = () => {
-  const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: Reset
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token'); 
+
+  const [step, setStep] = useState(token ? 3 : 1); 
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const inputRefs = useRef([]);
+
+  const [isLoading, setIsLoading] = useState(false);
+
   const navigate = useNavigate();
+  
+  // Khởi tạo hook useAlert
+  const { showAlert } = useAlert();
 
-  const handleNextStep = (e) => {
+  const handleSendLink = async (e) => {
     e.preventDefault();
-    setStep(step + 1);
-  };
-
-  const handleOtpChange = (element, index) => {
-    if (isNaN(element.value)) return false;
-    setOtp([...otp.map((d, idx) => (idx === index ? element.value : d))]);
-    if (element.value !== '' && index < 5) {
-      inputRefs.current[index + 1].focus();
+    setIsLoading(true);
+    try {
+      await authApi.forgotPassword(email);
+      setStep(2); 
+      showAlert('Đã gửi liên kết khôi phục. Vui lòng kiểm tra email!', 'success');
+    } catch (error) {
+      showAlert(error.response?.data?.message || 'Có lỗi xảy ra khi gửi email. Vui lòng thử lại.', 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleOtpKeyDown = (e, index) => {
-    if (e.key === 'Backspace' && index > 0 && otp[index] === '') {
-      inputRefs.current[index - 1].focus();
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
+      showAlert('Mật khẩu xác nhận không khớp!', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await authApi.resetPassword({ token, newPassword });
+      showAlert('Đặt lại mật khẩu thành công! Vui lòng đăng nhập.', 'success');
+      navigate('/login');
+    } catch (error) {
+      showAlert(error.response?.data?.message || 'Token không hợp lệ hoặc đã hết hạn.', 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -56,7 +83,7 @@ const ForgotPasswordPage = () => {
           </div>
 
           <div className="text-zinc-400 text-sm">
-            Step {step} of 3 • {step === 1 ? 'Identification' : step === 2 ? 'Verification' : 'Reset'}
+            Step {step} of 3 • {step === 1 ? 'Identification' : step === 2 ? 'Check Email' : 'Reset'}
           </div>
         </div>
       </div>
@@ -64,7 +91,8 @@ const ForgotPasswordPage = () => {
       {/* Right Side - Step Forms */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-12">
         <div className="w-full max-w-md">
-          {/* Step 1: Enter Email */}
+
+          {/* Step 1: Nhập Email để gửi Link */}
           {step === 1 && (
             <div className="animate-fade-in">
               <div className="mb-10 text-center lg:text-left">
@@ -76,10 +104,10 @@ const ForgotPasswordPage = () => {
                   <span className="text-sm font-bold uppercase tracking-widest">Back to login</span>
                 </button>
                 <h1 className="text-[32px] font-bold text-zinc-900 mb-2">Forgot Password?</h1>
-                <p className="text-zinc-500">No worries! Enter the email address associated with your account and we'll send an OTP to reset your password.</p>
+                <p className="text-zinc-500">Nhập email liên kết với tài khoản của bạn, chúng tôi sẽ gửi một liên kết để đặt lại mật khẩu.</p>
               </div>
 
-              <form className="space-y-8" onSubmit={handleNextStep}>
+              <form className="space-y-8" onSubmit={handleSendLink}>
                 <div>
                   <label className="block text-label-md font-bold text-zinc-900 mb-2">Email Address</label>
                   <input 
@@ -91,15 +119,18 @@ const ForgotPasswordPage = () => {
                     className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container transition-all"
                   />
                 </div>
-                <button className="w-full bg-primary-container text-white font-bold py-5 rounded-2xl shadow-[0_15px_30px_-5px_rgba(0,82,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                  Send OTP
-                  <span className="material-symbols-outlined">send</span>
+                <button 
+                  disabled={isLoading}
+                  className={`w-full bg-primary-container text-white font-bold py-5 rounded-2xl shadow-[0_15px_30px_-5px_rgba(0,82,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                >
+                  {isLoading ? 'Đang gửi...' : 'Gửi liên kết khôi phục'}
+                  {!isLoading && <span className="material-symbols-outlined">send</span>}
                 </button>
               </form>
             </div>
           )}
 
-          {/* Step 2: Verify OTP */}
+          {/* Step 2: Thông báo check Email */}
           {step === 2 && (
             <div className="animate-fade-in">
               <div className="mb-10 text-center lg:text-left">
@@ -108,52 +139,41 @@ const ForgotPasswordPage = () => {
                   className="flex items-center gap-2 text-zinc-400 hover:text-zinc-900 transition-colors mb-6 group"
                 >
                   <span className="material-symbols-outlined text-sm transition-transform group-hover:-translate-x-1">arrow_back</span>
-                  <span className="text-sm font-bold uppercase tracking-widest">Change Email</span>
+                  <span className="text-sm font-bold uppercase tracking-widest">Thay đổi Email</span>
                 </button>
-                <h1 className="text-[32px] font-bold text-zinc-900 mb-2">Verify OTP</h1>
+                <h1 className="text-[32px] font-bold text-zinc-900 mb-2">Kiểm tra Email của bạn</h1>
                 <p className="text-zinc-500">
-                  We've sent a 6-digit code to <span className="text-zinc-900 font-bold">{email}</span>. 
-                  Enter the code to continue.
+                  Chúng tôi đã gửi một liên kết khôi phục đến <span className="text-zinc-900 font-bold">{email}</span>. 
+                  Vui lòng kiểm tra hộp thư đến (và mục Spam) để tiếp tục.
                 </p>
               </div>
 
-              <form className="space-y-10" onSubmit={handleNextStep}>
-                <div className="flex justify-between gap-2 md:gap-4">
-                  {otp.map((data, index) => (
-                    <input
-                      key={index}
-                      type="text"
-                      maxLength="1"
-                      ref={(el) => (inputRefs.current[index] = el)}
-                      value={data}
-                      onChange={(e) => handleOtpChange(e.target, index)}
-                      onKeyDown={(e) => handleOtpKeyDown(e, index)}
-                      className="w-full aspect-square text-center text-2xl font-bold bg-zinc-50 border border-zinc-100 rounded-2xl outline-none focus:ring-2 focus:ring-primary-container focus:bg-white transition-all"
-                    />
-                  ))}
-                </div>
-                <button className="w-full bg-primary-container text-white font-bold py-5 rounded-2xl shadow-[0_15px_30px_-5px_rgba(0,82,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all">
-                  Verify & Continue
-                </button>
-              </form>
+              <button 
+                onClick={() => navigate('/login')}
+                className="w-full bg-zinc-100 text-zinc-900 font-bold py-5 rounded-2xl hover:bg-zinc-200 transition-all"
+              >
+                Trở về trang Đăng nhập
+              </button>
             </div>
           )}
 
-          {/* Step 3: Reset Password */}
+          {/* Step 3: Đặt lại Mật khẩu */}
           {step === 3 && (
             <div className="animate-fade-in">
               <div className="mb-10 text-center lg:text-left">
-                <h1 className="text-[32px] font-bold text-zinc-900 mb-2">Create New Password</h1>
-                <p className="text-zinc-500">Set a strong password to protect your Aero-Tech account.</p>
+                <h1 className="text-[32px] font-bold text-zinc-900 mb-2">Tạo mật khẩu mới</h1>
+                <p className="text-zinc-500">Tạo một mật khẩu mạnh để bảo vệ tài khoản Aero-Tech của bạn.</p>
               </div>
 
-              <form className="space-y-6" onSubmit={() => navigate('/login')}>
+              <form className="space-y-6" onSubmit={handleResetPassword}>
                 <div className="relative">
-                  <label className="block text-label-md font-bold text-zinc-900 mb-2">New Password</label>
+                  <label className="block text-label-md font-bold text-zinc-900 mb-2">Mật khẩu mới</label>
                   <div className="relative">
                     <input 
                       type={showPassword ? "text" : "password"}
                       required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="••••••••"
                       className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container transition-all"
                     />
@@ -168,17 +188,22 @@ const ForgotPasswordPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-label-md font-bold text-zinc-900 mb-2">Confirm New Password</label>
+                  <label className="block text-label-md font-bold text-zinc-900 mb-2">Xác nhận mật khẩu mới</label>
                   <input 
                     type="password"
                     required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
                     className="w-full bg-zinc-50 border border-zinc-100 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container transition-all"
                   />
                 </div>
 
-                <button className="w-full bg-primary-container text-white font-bold py-5 rounded-2xl shadow-[0_15px_30px_-5px_rgba(0,82,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all">
-                  Reset Password
+                <button 
+                  disabled={isLoading}
+                  className={`w-full bg-primary-container text-white font-bold py-5 rounded-2xl shadow-[0_15px_30px_-5px_rgba(0,82,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                >
+                  {isLoading ? 'Đang xử lý...' : 'Xác nhận đổi mật khẩu'}
                 </button>
               </form>
             </div>

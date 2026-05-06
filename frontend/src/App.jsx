@@ -15,28 +15,36 @@ import ProfilePage from './pages/ProfilePage';
 import OrdersPage from './pages/OrdersPage';
 import TechnologyPage from './pages/TechnologyPage';
 
+import { AlertProvider } from './contexts/AlertContext';
+import { AuthProvider } from './contexts/AuthContext';
+
 function App() {
   return (
-    <Router>
-      <div className="w-full">
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/explore" element={<ExplorePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/product/:id" element={<ProductDetailPage />} />
-          <Route path="/athletes" element={<AthletesPage />} />
-          <Route path="/flash-sale" element={<FlashSalePage />} />
-          <Route path="/cart" element={<CartPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/technology" element={<TechnologyPage />} />
-        </Routes>
-      </div>
-    </Router>
+    <AlertProvider>
+      <AuthProvider>
+        <Router>
+          <div className="w-full">
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/explore" element={<ExplorePage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/product/:id" element={<ProductDetailPage />} />
+              <Route path="/athletes" element={<AthletesPage />} />
+              <Route path="/flash-sale" element={<FlashSalePage />} />
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/technology" element={<TechnologyPage />} />
+            </Routes>
+          </div>
+        </Router>
+      </AuthProvider>
+    </AlertProvider>
+    
   );
 }
 

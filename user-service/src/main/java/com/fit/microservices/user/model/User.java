@@ -19,6 +19,9 @@ public class User {
     private String address;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    // Trong file User.java
+    private String avatarUrl;
+
     @PrePersist
     public void prePersist() {
         createdAt = LocalDateTime.now();

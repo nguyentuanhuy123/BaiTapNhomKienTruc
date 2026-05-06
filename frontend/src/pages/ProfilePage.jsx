@@ -1,17 +1,16 @@
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import { Link } from 'react-router-dom';
+import userApi from '../api/userApi'; // Import userApi bạn vừa tạo
+import { useAlert } from '../contexts/AlertContext';
 
 const ProfilePage = () => {
-  const user = {
-    name: "Alex Mitchell",
-    email: "alex.mitchell@velocity.com",
-    phone: "+1 (555) 012-3456",
-    address: "1248 Innovation Way, Suite 400, San Francisco, CA 94105",
-    memberSince: "February 2024",
-    avatar: "https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
-  };
+  const { showAlert } = useAlert();
+  const [userData, setUserData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // --- MOCK DATA CHO ORDERS (Giữ nguyên theo yêu cầu) ---
   const recentOrders = [
     {
       id: "#VL-90821",
@@ -31,6 +30,47 @@ const ProfilePage = () => {
     }
   ];
 
+  // --- LẤY DỮ LIỆU USER THẬT ---
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        // Lưu ý: Bạn cần lưu email vào localStorage lúc Login thành công 
+        // hoặc giải mã từ AccessToken. Ở đây mình giả định lấy từ localStorage.
+        const userEmail = localStorage.getItem('userEmail'); 
+        
+        if (!userEmail) {
+          showAlert("Không tìm thấy thông tin phiên đăng nhập", "error");
+          setIsLoading(false);
+          return;
+        }
+
+        const data = await userApi.getCurrentUser(userEmail);
+        setUserData(data);
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        showAlert("Không thể tải thông tin cá nhân", "error");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  // Hiển thị trạng thái loading
+  if (isLoading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-zinc-50/50 items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-container"></div>
+      </div>
+    );
+  }
+
+  // Nếu không có dữ liệu
+  if (!userData) {
+    return <div className="text-center mt-20">Không tìm thấy dữ liệu người dùng.</div>;
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50/50">
       <Navbar />
@@ -38,7 +78,8 @@ const ProfilePage = () => {
       <main className="flex-1 pt-24 pb-20 px-margin-mobile md:px-margin-desktop max-w-[1100px] mx-auto w-full">
         {/* Top Section: Info & Security */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* Personal Info Card */}
+          
+          {/* Personal Info Card (REAL DATA) */}
           <div className="lg:col-span-2 bg-white rounded-[40px] p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden">
             <div className="flex justify-between items-start mb-10">
               <h2 className="text-2xl font-bold text-zinc-900 uppercase tracking-tight">Personal Information</h2>
@@ -47,29 +88,33 @@ const ProfilePage = () => {
 
             <div className="flex items-center gap-8 mb-12">
               <div className="relative group cursor-pointer">
-                <img src={user.avatar} alt={user.name} className="w-24 h-24 rounded-full object-cover border-4 border-zinc-50" />
+                <img 
+                    src={userData.avatarUrl || "https://via.placeholder.com/150"} 
+                    alt={userData.fullName} 
+                    className="w-24 h-24 rounded-full object-cover border-4 border-zinc-50" 
+                />
                 <div className="absolute bottom-0 right-0 w-8 h-8 bg-primary-container text-white rounded-full flex items-center justify-center border-2 border-white">
                   <span className="material-symbols-outlined text-sm">photo_camera</span>
                 </div>
               </div>
               <div>
-                <h1 className="text-3xl font-black font-space-grotesk text-zinc-900 tracking-tight">{user.name}</h1>
-                <p className="text-zinc-400 text-sm font-medium">Member since {user.memberSince}</p>
+                <h1 className="text-3xl font-black font-space-grotesk text-zinc-900 tracking-tight">{userData.fullName}</h1>
+                <p className="text-zinc-400 text-sm font-medium">Verified Customer</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-10 gap-x-8">
               <div>
                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Email Address</p>
-                <p className="font-bold text-zinc-900">{user.email}</p>
+                <p className="font-bold text-zinc-900">{userData.email}</p>
               </div>
               <div>
                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Phone Number</p>
-                <p className="font-bold text-zinc-900">{user.phone}</p>
+                <p className="font-bold text-zinc-900">{userData.phone || "Not updated"}</p>
               </div>
               <div className="md:col-span-2">
                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-2">Primary Address</p>
-                <p className="font-bold text-zinc-900 max-w-sm">{user.address}</p>
+                <p className="font-bold text-zinc-900 max-w-sm">{userData.address || "No address provided"}</p>
               </div>
             </div>
           </div>
@@ -98,7 +143,7 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Bottom Section: Recent Orders */}
+        {/* Bottom Section: Recent Orders (MOCK DATA) */}
         <section className="bg-white rounded-[40px] p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <div className="flex justify-between items-center mb-10">
             <h2 className="text-2xl font-bold text-zinc-900 uppercase tracking-tight">Recent Orders</h2>
