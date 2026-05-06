@@ -1,36 +1,140 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import ProductCard from '../components/common/ProductCard';
-import { EXPLORE_PRODUCTS } from '../constants/mockData';
+import { productService } from '../services/productService';
 
 const ProductDetailPage = () => {
   const { id } = useParams();
-  const [selectedSize, setSelectedSize] = useState('US 10');
-  const [selectedColor, setSelectedColor] = useState('Blue');
-  const [mainImage, setMainImage] = useState("https://lh3.googleusercontent.com/aida-public/AB6AXuDlNG2P_20pGAAH4lD1LeB5XUPjnnrFc1Iqelb0yK_m5pU8LBE-r1o2Qc0s98A3ibTFLgTBWkOL_Of5_oOH0uULbeky0x39_KUNX_WWNODTJMDKHAAG_xht_x1U0gWH71RRXbW_ZtO1ozzj1yI-3cDWy7ha4kOLfSxqzcFYN7BgdKbZ3lfnDHt2k0E7f0EimKNABOUGiiHM7MyaiARflxSGkXj5a0rOM8LI-ylmoHgcPxKHEJvRV5XyWWxtRcZzNNk7Ff5qopsRjeM");
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
+  const [mainImage, setMainImage] = useState("");
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [isLiked, setIsLiked] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState({ content: '', rating: 5, username: '' });
+  const [submitting, setSubmitting] = useState(false);
 
-  const thumbnails = [
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuDlNG2P_20pGAAH4lD1LeB5XUPjnnrFc1Iqelb0yK_m5pU8LBE-r1o2Qc0s98A3ibTFLgTBWkOL_Of5_oOH0uULbeky0x39_KUNX_WWNODTJMDKHAAG_xht_x1U0gWH71RRXbW_ZtO1ozzj1yI-3cDWy7ha4kOLfSxqzcFYN7BgdKbZ3lfnDHt2k0E7f0EimKNABOUGiiHM7MyaiARflxSGkXj5a0rOM8LI-ylmoHgcPxKHEJvRV5XyWWxtRcZzNNk7Ff5qopsRjeM",
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuAz8dC1bhFHEAQ2mtNFLQZxqJmpjz1uJPQ9tyYXoNc7rwV15o7-D75288YdtAAKKdypNXvg0TQPkXwx4KrxVYtGLy1Y8QFAJn59CzNJ5ZIWzxeEPSWLJfwOaVcrAYiFm2wa2WCcg3BqmSlLGKsurmYPaiVyBpPBX8RxDPfdD_cljsNm3rmYifWKbkTaYmRTu4dlqrzVuyXY6Dwy_rNMSZ7ANnXgxhHwSNqWEo--SpdWOepwnSFNzUCcqqtmsZdRJbbjCUv5yW_MigY",
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuCOOtGdRouhmTO68TX8XYPVaGoERnpK2bMeHycOU7JX23qISGbVRJaEyY8Wxc_9yiKjMwm5RmmTB5L-BCJzuYc8RzcfbJ2xaYKGw7EGp_v3J3F54G9Vbc1RfzyrtyuuOXTMvemQWEBb3uhbK7-PVQr3kbo7-w9JoGP7BDkxdJT1UYk7X2hfwFzbngsk03gAvhxgS34bSWpKCfUsFSlnFzaIMahsBlzGMZ6XsJVJRMR5FQkmnEv1W7rX1u7PdktXzv2AvjNdfvEY-q4",
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuCHN-KL1gRCNjQ5i218BP0Qw62MlHgsce6FIsDq-Ew9Odjd7joRKs78wP3h_qAuxgFc-gqbk_BHsKy1S2HE2qcjpDr0gKdwCOws0EsLBTUJ9qFAqsd9nLmfo12sYTGv3LUA2xhAO9Xbv_9Fhp_2sNZq8w0CSm8nDf8b35IhqBQMgY6yq_vfOsEamCjAbNpaTBiaP_zSwPuiSyO7OJW5mT3I8hUP4kd8jz8uBs47mr1ERIt0Nd3VkXjTT4SQ-DmxaoWiOw3OijwOrsg"
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // 1. Fetch Core Product Info (Must succeed)
+        try {
+          const data = await productService.getProductById(id);
+          if (data) {
+            setProduct(data);
+            
+            // Set default selection
+            if (data.sizes?.length > 0) setSelectedSize(`US ${data.sizes[0]}`);
+            if (data.colors?.length > 0) setSelectedColor(data.colors[0]);
+            if (data.imageResponses?.length > 0) setMainImage(data.imageResponses[0].url);
+            else if (data.image) setMainImage(data.image);
+
+            // Fetch related products (optional)
+            productService.getAllProducts(0, 4, data.categoryName)
+              .then(related => {
+                if (related && related.content) {
+                  setRelatedProducts(related.content.filter(p => p.id !== parseInt(id)).slice(0, 4));
+                }
+              }).catch(e => console.warn('Related products failed:', e));
+          }
+        } catch (e) {
+          console.error('Failed to fetch core product info:', e);
+          setProduct(null);
+        }
+
+        // 2. Secondary Info (Disabled temporarily for auth implementation)
+        /* 
+        productService.getCommentsByProduct(id).then(setComments);
+        productService.isInWishlist('testuser', id).then(setIsLiked);
+        */
+
+      } catch (globalError) {
+        console.error('Global fetch error:', globalError);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+    window.scrollTo(0, 0);
+  }, [id]);
+
+  const handleCommentSubmit = async (e) => {
+    e.preventDefault();
+    if (!newComment.content || !newComment.username) return;
+
+    try {
+      setSubmitting(true);
+      const savedComment = await productService.addComment({
+        ...newComment,
+        productId: parseInt(id)
+      });
+      setComments([savedComment, ...comments]);
+      setNewComment({ content: '', rating: 5, username: '' });
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleWishlistToggle = async () => {
+    // Temporarily disabled API call for auth implementation
+    /*
+    try {
+      await productService.toggleWishlist('testuser', id);
+    } catch (error) {
+      console.error('Failed to toggle wishlist:', error);
+    }
+    */
+    setIsLiked(!isLiked); // Keep local UI working
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-white">
+        <Navbar />
+        <main className="flex-1 pt-24 flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-zinc-100 border-t-primary-container rounded-full animate-spin"></div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="flex flex-col min-h-screen bg-white">
+        <Navbar />
+        <main className="flex-1 pt-24 text-center py-20">
+          <h2 className="text-2xl font-bold text-zinc-900 mb-4">Product Not Found</h2>
+          <Link to="/explore" className="text-primary-container font-bold hover:underline">Back to Explore</Link>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const thumbnails = product.imageResponses?.map(img => img.url) || [];
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-white selection:bg-blue-100">
       <Navbar />
 
-      <main className="flex-1 pt-24 pb-20">
+      <main className="flex-1 pt-32 pb-20">
         <div className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
           {/* Breadcrumbs */}
           <nav className="flex items-center gap-2 text-zinc-400 text-xs mb-8">
             <Link to="/" className="hover:text-zinc-900">SHOP</Link>
             <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <Link to="/explore" className="hover:text-zinc-900 uppercase">RUNNING</Link>
+            <Link to="/explore" className="hover:text-zinc-900 uppercase">{product.categoryName || 'EXPLORE'}</Link>
             <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-zinc-900 font-bold uppercase">AERO-KNIT X1</span>
+            <span className="text-zinc-900 font-bold uppercase">{product.name}</span>
           </nav>
 
           {/* Product Hero */}
@@ -38,17 +142,22 @@ const ProductDetailPage = () => {
             {/* Gallery */}
             <div className="lg:col-span-7 space-y-4">
               <div className="relative aspect-[4/3] bg-zinc-50 rounded-3xl overflow-hidden group">
-                <span className="absolute top-6 left-6 bg-primary-container text-white px-4 py-1.5 rounded-full text-label-sm font-bold uppercase z-10 shadow-lg">New Arrival</span>
-                <img 
-                  src={mainImage} 
-                  alt="Product" 
-                  className="w-full h-full object-contain p-12 transition-transform duration-700 group-hover:scale-105" 
+                {product.isNew && (
+                  <span className="absolute top-6 left-6 bg-primary-container text-white px-4 py-1.5 rounded-full text-label-sm font-bold uppercase z-10 shadow-lg">New Arrival</span>
+                )}
+                {product.discountPercentage > 0 && (
+                  <span className="absolute top-6 right-6 bg-error text-white px-4 py-1.5 rounded-full text-label-sm font-bold uppercase z-10 shadow-lg">-{product.discountPercentage}%</span>
+                )}
+                <img
+                  src={mainImage}
+                  alt="Product"
+                  className="w-full h-full object-contain p-12 transition-transform duration-700 group-hover:scale-105"
                 />
               </div>
               <div className="grid grid-cols-4 gap-4">
                 {thumbnails.map((img, i) => (
-                  <button 
-                    key={i} 
+                  <button
+                    key={i}
                     onClick={() => setMainImage(img)}
                     className={`aspect-square rounded-2xl bg-zinc-50 overflow-hidden border-2 transition-all p-2 ${mainImage === img ? 'border-primary-container scale-[0.98]' : 'border-transparent hover:border-zinc-200'}`}
                   >
@@ -60,24 +169,35 @@ const ProductDetailPage = () => {
 
             {/* Info */}
             <div className="lg:col-span-5 flex flex-col">
-              <h1 className="text-headline-xl font-space-grotesk font-black text-zinc-900 mb-2 leading-none">AERO-KNIT X1</h1>
-              <p className="text-headline-md font-bold text-primary-container mb-6">$245.00</p>
-              
+              <h1 className="text-headline-xl font-space-grotesk font-black text-zinc-900 mb-2 leading-none">{product.name}</h1>
+              <div className="flex items-center gap-4 mb-6">
+                <p className="text-headline-md font-bold text-primary-container">${product.price?.toFixed(2)}</p>
+                {product.oldPrice && (
+                  <p className="text-zinc-400 line-through font-bold">${product.oldPrice.toFixed(2)}</p>
+                )}
+              </div>
+
               <p className="text-zinc-500 mb-8 leading-relaxed">
-                Engineered for ultra-motion. The X1 combines our proprietary AERO-KNIT upper with a dual-density carbon-infused midsole for unparalleled energy return and a cloud-like sensation.
+                {product.description || "Engineered for ultra-motion. Designed for those who demand precision and speed on every surface."}
               </p>
 
               <div className="mb-8">
-                <p className="text-label-md font-bold text-zinc-900 mb-4 uppercase tracking-widest">Color: <span className="text-zinc-400 font-normal">Electric Blue / Alpine White</span></p>
+                <p className="text-label-md font-bold text-zinc-900 mb-4 uppercase tracking-widest">Color: <span className="text-zinc-400 font-normal">{selectedColor}</span></p>
                 <div className="flex gap-4">
-                  {['#0052FF', '#1A1C1C', '#E2E2E2'].map((c, i) => (
-                    <button 
-                      key={i} 
-                      className={`w-10 h-10 rounded-full border-2 p-0.5 transition-all ${i === 0 ? 'border-primary-container scale-110 shadow-md' : 'border-transparent'}`}
+                  {product.colors?.map((c, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setSelectedColor(c);
+                        // Heuristic: If we have multiple images, try to switch to the one matching the color index
+                        if (thumbnails[i]) setMainImage(thumbnails[i]);
+                      }}
+                      className={`w-10 h-10 rounded-full border-2 p-0.5 transition-all duration-300 ${selectedColor === c ? 'border-primary-container scale-125 shadow-lg' : 'border-zinc-200 hover:border-zinc-400'}`}
                     >
                       <div className="w-full h-full rounded-full" style={{ backgroundColor: c }}></div>
                     </button>
                   ))}
+                  {(!product.colors || product.colors.length === 0) && <p className="text-zinc-400 text-xs italic">Standard Edition</p>}
                 </div>
               </div>
 
@@ -87,22 +207,31 @@ const ProductDetailPage = () => {
                   <button className="text-xs font-bold text-primary-container hover:underline uppercase">Size Guide</button>
                 </div>
                 <div className="grid grid-cols-4 gap-3">
-                  {['US 8', 'US 9', 'US 10', 'US 11', 'US 12', 'US 13'].map((s) => (
-                    <button 
+                  {product.sizes?.map((s) => (
+                    <button
                       key={s}
-                      onClick={() => setSelectedSize(s)}
-                      className={`py-3 rounded-xl border-2 font-bold transition-all ${selectedSize === s ? 'border-primary-container bg-primary-container/5 text-primary-container' : 'border-zinc-100 text-zinc-500 hover:border-zinc-200'}`}
+                      onClick={() => setSelectedSize(`US ${s}`)}
+                      className={`py-3 rounded-xl border-2 font-bold transition-all ${selectedSize === `US ${s}` ? 'border-primary-container bg-primary-container/5 text-primary-container' : 'border-zinc-100 text-zinc-500 hover:border-zinc-200'}`}
                     >
-                      {s}
+                      US {s}
                     </button>
                   ))}
+                  {(!product.sizes || product.sizes.length === 0) && <p className="text-zinc-400 text-xs italic">One Size Fits All</p>}
                 </div>
               </div>
 
-              <button className="w-full bg-primary-container text-white font-bold py-5 rounded-2xl shadow-[0_15px_30px_-5px_rgba(0,82,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 mb-8">
-                <span className="material-symbols-outlined">shopping_bag</span>
-                ADD TO BAG
-              </button>
+              <div className="flex gap-4">
+                <button className="flex-1 bg-primary-container text-white font-bold py-5 rounded-2xl shadow-[0_15px_30px_-5px_rgba(0,82,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 mb-8">
+                  <span className="material-symbols-outlined">shopping_bag</span>
+                  ADD TO BAG
+                </button>
+                <button 
+                  onClick={handleWishlistToggle}
+                  className={`w-16 h-[60px] rounded-2xl border-2 flex items-center justify-center transition-all ${isLiked ? 'border-red-100 bg-red-50 text-red-500 shadow-inner' : 'border-zinc-100 text-zinc-400 hover:border-zinc-200'}`}
+                >
+                  <span className={`material-symbols-outlined text-2xl ${isLiked ? 'fill-red-500' : ''}`}>favorite</span>
+                </button>
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-zinc-50 p-4 rounded-xl flex items-center gap-3">
@@ -140,10 +269,10 @@ const ProductDetailPage = () => {
           {/* Marketing Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-32">
             <div className="relative rounded-[40px] overflow-hidden aspect-[4/3] group">
-              <img 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0RVALbOkLApO_oXHaOyd3IWWZ8Qvks5oe-kHfsvF7mW75C2xuAjpcGIUGPI-gSj9wL5DFdjTwLg_yykk_NcgMz11D88DnV5QQxcfFf4FoHCVaz7jq_AAA-M-5q0HAfN4gImuC1pbHX3O-2ndzjL2XmHZyS22WnMsUdZUWrRqOnwHNhjd8mmVUM0GPKSzSzLW_npyBKLUzzaJQEANEWMxYnif5AKpViFptzlZJo8Kuyuv24ENPSUdQmcRrEaPBZPQ2io5_yTbQ4b8" 
-                alt="Action" 
-                className="w-full h-full object-cover transition-transform duration-[10s] group-hover:scale-110" 
+              <img
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0RVALbOkLApO_oXHaOyd3IWWZ8Qvks5oe-kHfsvF7mW75C2xuAjpcGIUGPI-gSj9wL5DFdjTwLg_yykk_NcgMz11D88DnV5QQxcfFf4FoHCVaz7jq_AAA-M-5q0HAfN4gImuC1pbHX3O-2ndzjL2XmHZyS22WnMsUdZUWrRqOnwHNhjd8mmVUM0GPKSzSzLW_npyBKLUzzaJQEANEWMxYnif5AKpViFptzlZJo8Kuyuv24ENPSUdQmcRrEaPBZPQ2io5_yTbQ4b8"
+                alt="Action"
+                className="w-full h-full object-cover transition-transform duration-[10s] group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-12">
                 <p className="text-white/60 text-xs font-black uppercase tracking-widest mb-2">Street Ready</p>
@@ -203,9 +332,12 @@ const ProductDetailPage = () => {
           <div className="mb-32">
             <h2 className="text-label-sm font-black text-primary-container uppercase tracking-[0.3em] mb-12 text-center">You May Also Like</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
-              {EXPLORE_PRODUCTS.slice(0, 4).map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {relatedProducts.map((p) => (
+                <ProductCard key={p.id} product={p} />
               ))}
+              {relatedProducts.length === 0 && (
+                <p className="col-span-full text-center text-zinc-400 italic">No similar products found.</p>
+              )}
             </div>
           </div>
 

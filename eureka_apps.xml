@@ -1,0 +1,78 @@
+<applications>
+  <versions__delta>1</versions__delta>
+  <apps__hashcode>UP_2_</apps__hashcode>
+  <application>
+    <name>API-GATEWAY</name>
+    <instance>
+      <instanceId>localhost:api-gateway:9000</instanceId>
+      <hostName>localhost</hostName>
+      <app>API-GATEWAY</app>
+      <ipAddr>192.168.56.1</ipAddr>
+      <status>UP</status>
+      <overriddenstatus>UNKNOWN</overriddenstatus>
+      <port enabled="true">9000</port>
+      <securePort enabled="false">443</securePort>
+      <countryId>1</countryId>
+      <dataCenterInfo class="com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo">
+        <name>MyOwn</name>
+      </dataCenterInfo>
+      <leaseInfo>
+        <renewalIntervalInSecs>30</renewalIntervalInSecs>
+        <durationInSecs>90</durationInSecs>
+        <registrationTimestamp>1777996252989</registrationTimestamp>
+        <lastRenewalTimestamp>1777996673759</lastRenewalTimestamp>
+        <evictionTimestamp>0</evictionTimestamp>
+        <serviceUpTimestamp>1777996252991</serviceUpTimestamp>
+      </leaseInfo>
+      <metadata>
+        <management.port>9000</management.port>
+      </metadata>
+      <homePageUrl>http://localhost:9000/</homePageUrl>
+      <statusPageUrl>http://localhost:9000/actuator/info</statusPageUrl>
+      <healthCheckUrl>http://localhost:9000/actuator/health</healthCheckUrl>
+      <vipAddress>api-gateway</vipAddress>
+      <secureVipAddress>api-gateway</secureVipAddress>
+      <isCoordinatingDiscoveryServer>false</isCoordinatingDiscoveryServer>
+      <lastUpdatedTimestamp>1777996252991</lastUpdatedTimestamp>
+      <lastDirtyTimestamp>1777996252785</lastDirtyTimestamp>
+      <actionType>ADDED</actionType>
+    </instance>
+  </application>
+  <application>
+    <name>PRODUCT-SERVICE</name>
+    <instance>
+      <instanceId>localhost:product-service:8080</instanceId>
+      <hostName>localhost</hostName>
+      <app>PRODUCT-SERVICE</app>
+      <ipAddr>192.168.56.1</ipAddr>
+      <status>UP</status>
+      <overriddenstatus>UNKNOWN</overriddenstatus>
+      <port enabled="true">8080</port>
+      <securePort enabled="false">443</securePort>
+      <countryId>1</countryId>
+      <dataCenterInfo class="com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo">
+        <name>MyOwn</name>
+      </dataCenterInfo>
+      <leaseInfo>
+        <renewalIntervalInSecs>30</renewalIntervalInSecs>
+        <durationInSecs>90</durationInSecs>
+        <registrationTimestamp>1777996314004</registrationTimestamp>
+        <lastRenewalTimestamp>1777996674299</lastRenewalTimestamp>
+        <evictionTimestamp>0</evictionTimestamp>
+        <serviceUpTimestamp>1777996314005</serviceUpTimestamp>
+      </leaseInfo>
+      <metadata>
+        <management.port>8080</management.port>
+      </metadata>
+      <homePageUrl>http://localhost:8080/</homePageUrl>
+      <statusPageUrl>http://localhost:8080/actuator/info</statusPageUrl>
+      <healthCheckUrl>http://localhost:8080/actuator/health</healthCheckUrl>
+      <vipAddress>product-service</vipAddress>
+      <secureVipAddress>product-service</secureVipAddress>
+      <isCoordinatingDiscoveryServer>false</isCoordinatingDiscoveryServer>
+      <lastUpdatedTimestamp>1777996314005</lastUpdatedTimestamp>
+      <lastDirtyTimestamp>1777996313853</lastDirtyTimestamp>
+      <actionType>ADDED</actionType>
+    </instance>
+  </application>
+</applications>
