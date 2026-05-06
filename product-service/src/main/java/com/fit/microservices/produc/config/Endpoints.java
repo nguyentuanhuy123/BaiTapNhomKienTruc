@@ -4,7 +4,8 @@ public class Endpoints {
     //Permit all
     public static final String[] PUBLIC_GET_ENDPOINTS = {
             "/api/product/**",
-            "/api/category/**"
+            "/api/category/**",
+            "/api/wishlist/**"
     };
     public static final String[] PUBLIC_POST_ENDPOINTS = {
 

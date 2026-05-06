@@ -25,6 +25,25 @@ public class Product implements Serializable {
     private String description;
     private String skuCode;
     private BigDecimal price;
+    private BigDecimal oldPrice;
+    private Integer discountPercentage;
+    private Boolean isNew;
+    private String brand;
+
+    // Technology fields
+    private String foamTech;
+    private String plateTech;
+    private String upperTech;
+
+    @ElementCollection
+    @CollectionTable(name = "product_colors", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "color")
+    private List<String> colors = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "product_sizes", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "size")
+    private List<Double> sizes = new ArrayList<>();
 
     @ManyToOne
     @JoinColumn(name = "category_id")

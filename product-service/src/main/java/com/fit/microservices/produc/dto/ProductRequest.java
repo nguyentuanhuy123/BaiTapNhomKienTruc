@@ -26,6 +26,19 @@ public class ProductRequest {
     @NotNull(message = "Giá sản phẩm không được để trống")
     @Positive(message = "Giá sản phẩm phải lớn hơn 0")
     private BigDecimal price;
+    private BigDecimal oldPrice;
+    private Integer discountPercentage;
+    private Boolean isNew;
+    private String brand;
+
+    // Technology fields
+    private String foamTech;
+    private String plateTech;
+    private String upperTech;
+
+    private List<String> colors;
+    private List<Double> sizes;
+
     @NotNull(message = "Category không được để trống")
     private Long categoryId;
     @NotEmpty(message = "Sản phẩm phải có ít nhất 1 hình ảnh")
