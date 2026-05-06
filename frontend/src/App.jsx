@@ -14,6 +14,11 @@ import CheckoutPage from './pages/CheckoutPage';
 import ProfilePage from './pages/ProfilePage';
 import OrdersPage from './pages/OrdersPage';
 import TechnologyPage from './pages/TechnologyPage';
+import WishlistPage from './pages/WishlistPage';
+import NotFoundPage from './pages/NotFoundPage';
+
+import ScrollToTop from './components/common/ScrollToTop';
+import BackToTop from './components/common/BackToTop';
 
 import { AlertProvider } from './contexts/AlertContext';
 import { AuthProvider } from './contexts/AuthContext';
@@ -25,6 +30,8 @@ function App() {
         <Router>
           <div className="w-full">
             <Routes>
+              <ScrollToTop />
+              <BackToTop />
               <Route path="/" element={<LandingPage />} />
               <Route path="/explore" element={<ExplorePage />} />
               <Route path="/login" element={<LoginPage />} />
@@ -44,7 +51,6 @@ function App() {
         </Router>
       </AuthProvider>
     </AlertProvider>
-    
   );
 }
 

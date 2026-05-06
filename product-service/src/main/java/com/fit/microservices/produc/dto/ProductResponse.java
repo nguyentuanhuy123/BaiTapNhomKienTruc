@@ -16,10 +16,20 @@ import java.util.List;
 @Getter
 public class ProductResponse implements Serializable {
 
+    private Long id;
     private String name;
     private String description;
     private String skuCode;
     private BigDecimal price;
+    private BigDecimal oldPrice;
+    private Integer discountPercentage;
+    private Boolean isNew;
+    private String brand;
+    private String foamTech;
+    private String plateTech;
+    private String upperTech;
+    private List<String> colors;
+    private List<Double> sizes;
     private String categoryName;
     private List<ImageResponse> imageResponses = new ArrayList<>();
 }
