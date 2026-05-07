@@ -1,6 +1,5 @@
 package com.fit.microservices.order.filter;
 
-import com.fit.microservices.order.dto.UserPrincipal;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -33,40 +32,38 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+        String authHeader = request.getHeader("Authorization");
 
-        // JWT auth disabled for direct frontend calls; pass through without auth.
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String token = authHeader.substring(7);
+
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            Long userId = claims.get("userId", Long.class);
+            String role = claims.get("role", String.class);
+
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            userId,
+                            null,
+                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                    );
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        } catch (Exception ex) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+
         filterChain.doFilter(request, response);
-        return;
-
-//        String authHeader = request.getHeader("Authorization");
-//
-//        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-//            filterChain.doFilter(request, response);
-//            return;
-//        }
-//
-//        String token = authHeader.substring(7);
-//
-//        Claims claims = Jwts.parserBuilder()
-//                .setSigningKey(getSigningKey())
-//                .build()
-//                .parseClaimsJws(token)
-//                .getBody();
-//
-//        Long userId = claims.get("userId", Long.class);
-//        String role = claims.get("role", String.class);
-//
-//
-//
-//
-//        UsernamePasswordAuthenticationToken authentication =
-//                new UsernamePasswordAuthenticationToken(
-//                        userId,
-//                        null,
-//                        List.of(new SimpleGrantedAuthority("ROLE_" + role))
-//                );
-//
-//        SecurityContextHolder.getContext().setAuthentication(authentication);
-//        filterChain.doFilter(request, response);
     }
 }

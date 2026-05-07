@@ -20,12 +20,12 @@ const ProductDetailPage = () => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState({ content: '', rating: 5, username: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [cartError, setCartError] = useState("");
   const navigate = useNavigate();
 
-  const getUserId = () => {
-    // return Number(localStorage.getItem("userId")) || 123;
-    return 123;
-  };
+  const authErrorMessage = "Vui long dang nhap de them san pham vao gio hang.";
+  const isAuthError = (e) => [401, 403].includes(e?.response?.status);
+
 
   const readLocalCart = () => {
     try {
@@ -120,20 +120,26 @@ const ProductDetailPage = () => {
 
 
   const handleAddToCart = async () => {
-    if (!product) return;
-
-    const userId = getUserId();
-    const skuCode = product.skuCode || `SKU-${product.id}`;
-
-    try {
-      // 1) Sync to backend cart
-      const updated = await cartService.addItem({
-        userId,
-        skuCode,
-        quantity: 1,
-        size: selectedSize || "N/A",
-        color: selectedColor || "N/A",
-      });
+      if (!product) return;
+ 
+      const skuCode = product.skuCode || `SKU-${product.id}`;
+     const primaryImage = product.imageResponses?.[0]?.url || product.image || "";
+     const productName = product.name || skuCode;
+     const productPrice = product.price || 0;
+  
+      try {
+        setCartError("");
+        // 1) Sync to backend cart
+        const updated = await cartService.addItem({
+           skuCode,
+          productId: product.id,
+          name: productName,
+          price: productPrice,
+          image: primaryImage,
+           quantity: 1,
+           size: selectedSize || "N/A",
+           color: selectedColor || "N/A",
+         });
 
       const normalizeKey = (value) => (value == null ? "" : String(value).trim().toLowerCase());
       const matched = updated?.items?.find(
@@ -159,18 +165,18 @@ const ProductDetailPage = () => {
         }
       } else {
         localCart.items.push({
-          id: `local-${product.id}-${selectedSize}-${selectedColor}`,
-          backendItemId: matched?.id ?? null,
-          productId: product.id,
-          skuCode,
-          name: product.name,
-          price: product.price || 0,
-          image: product.imageResponses?.[0]?.url || product.image || "",
-          size: selectedSize || "N/A",
-          color: selectedColor || "N/A",
-          quantity: 1,
-        });
-      }
+           id: `local-${product.id}-${selectedSize}-${selectedColor}`,
+           backendItemId: matched?.id ?? null,
+           productId: product.id,
+           skuCode,
+          name: productName,
+          price: productPrice,
+          image: primaryImage,
+           size: selectedSize || "N/A",
+           color: selectedColor || "N/A",
+           quantity: 1,
+         });
+       }
 
       localCart.updatedAt = new Date().toISOString();
       writeLocalCart(localCart);
@@ -179,6 +185,9 @@ const ProductDetailPage = () => {
       navigate("/cart");
     } catch (error) {
       console.error("Failed to add to cart:", error);
+      if (isAuthError(error)) {
+        setCartError(authErrorMessage);
+      }
     }
   };
 
@@ -322,6 +331,11 @@ const ProductDetailPage = () => {
                   <span className={`material-symbols-outlined text-2xl ${isLiked ? 'fill-red-500' : ''}`}>favorite</span>
                 </button>
               </div>
+              {cartError && (
+                <div className="mb-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {cartError}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-zinc-50 p-4 rounded-xl flex items-center gap-3">

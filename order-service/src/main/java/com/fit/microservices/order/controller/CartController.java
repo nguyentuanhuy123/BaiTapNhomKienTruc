@@ -6,6 +6,8 @@ import com.fit.microservices.order.dto.UpdateCartItemQuantityRequest;
 import com.fit.microservices.order.service.CartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,7 +30,7 @@ public class CartController {
     private Long currentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || auth.getPrincipal() == null) {
-            return 0L;
+            return null;
         }
         Object principal = auth.getPrincipal();
         if (principal instanceof Long l) {
@@ -43,23 +45,22 @@ public class CartController {
             } catch (NumberFormatException ignored) {
             }
         }
-        return 0L;
+        return null;
     }
 
     /**
      * Resolve userId for requests.
      * Priority:
      * 1) Authenticated principal (when JWT is enabled)
-     * 2) userId provided by frontend in request body (when security is permitAll)
      *
-     * NOTE: This is for development/testing only. In production, do NOT trust userId from client.
+     * NOTE: This requires a valid JWT in the Authorization header.
      */
-    private Long resolveUserId(Long requestUserId) {
+    private Long resolveUserId() {
         Long fromAuth = currentUserId();
-        if (fromAuth != null && fromAuth != 0L) {
-            return fromAuth;
+        if (fromAuth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid JWT");
         }
-        return requestUserId != null ? requestUserId : 0L;
+        return fromAuth;
     }
 
     // =========================
@@ -67,63 +68,32 @@ public class CartController {
     // =========================
 
     @GetMapping
-    public ResponseEntity<CartResponse> getCart(@RequestParam(required = false) Long userId) {
-        return ResponseEntity.ok(cartService.getCart(resolveUserId(userId)));
+    public ResponseEntity<CartResponse> getCart() {
+        return ResponseEntity.ok(cartService.getCart(resolveUserId()));
     }
 
     @PostMapping("/items")
     public ResponseEntity<CartResponse> addItem(@RequestBody AddCartItemRequest request) {
-        Long userId = resolveUserId(request.getUserId());
+        Long userId = resolveUserId();
         return ResponseEntity.ok(cartService.addItem(userId, request));
     }
 
     @PatchMapping("/items/{itemId}")
     public ResponseEntity<CartResponse> updateItemQuantity(
             @PathVariable Long itemId,
-            @RequestBody UpdateCartItemQuantityRequest request,
-            @RequestParam(required = false) Long userId
+            @RequestBody UpdateCartItemQuantityRequest request
     ) {
-        return ResponseEntity.ok(cartService.updateItemQuantity(resolveUserId(userId), itemId, request.getQuantity()));
+        return ResponseEntity.ok(cartService.updateItemQuantity(resolveUserId(), itemId, request.getQuantity()));
     }
 
     @DeleteMapping("/items/{itemId}")
-    public ResponseEntity<CartResponse> removeItem(@PathVariable Long itemId,
-                                                   @RequestParam(required = false) Long userId) {
-        return ResponseEntity.ok(cartService.removeItem(resolveUserId(userId), itemId));
+    public ResponseEntity<CartResponse> removeItem(@PathVariable Long itemId) {
+        return ResponseEntity.ok(cartService.removeItem(resolveUserId(), itemId));
     }
 
     @DeleteMapping
-    public ResponseEntity<CartResponse> clearCart(@RequestParam(required = false) Long userId) {
-        return ResponseEntity.ok(cartService.clearCart(resolveUserId(userId)));
+    public ResponseEntity<CartResponse> clearCart() {
+        return ResponseEntity.ok(cartService.clearCart(resolveUserId()));
     }
 
-    // =========================
-    // Legacy endpoints (deprecated)
-    // =========================
-
-    /** @deprecated use POST /api/cart/items */
-    @Deprecated
-    @PreAuthorize("hasRole('USER')")
-    @PostMapping("/add")
-    public ResponseEntity<CartResponse> addToCart(@RequestBody AddCartItemRequest request) {
-        Long userId = resolveUserId(request.getUserId());
-        return ResponseEntity.ok(cartService.addItem(userId, request));
-    }
-
-    /** @deprecated use DELETE /api/cart/items/{itemId} */
-    @Deprecated
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<CartResponse> deleteFromCart(@PathVariable Long id,
-                                                       @RequestParam(required = false) Long userId) {
-        return ResponseEntity.ok(cartService.removeItem(resolveUserId(userId), id));
-    }
-
-    /** @deprecated use DELETE /api/cart */
-    @Deprecated
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    @DeleteMapping("/delete")
-    public ResponseEntity<CartResponse> deleteFromCart(@RequestParam(required = false) Long userId) {
-        return ResponseEntity.ok(cartService.clearCart(resolveUserId(userId)));
-    }
 }

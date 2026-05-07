@@ -29,9 +29,9 @@ function App() {
       <AuthProvider>
         <Router>
           <div className="w-full">
+            <ScrollToTop />
+            <BackToTop />
             <Routes>
-              <ScrollToTop />
-              <BackToTop />
               <Route path="/" element={<LandingPage />} />
               <Route path="/explore" element={<ExplorePage />} />
               <Route path="/login" element={<LoginPage />} />

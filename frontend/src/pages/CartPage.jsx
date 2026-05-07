@@ -6,23 +6,17 @@ import CartItem from "../components/cart/CartItem";
 import OrderSummary from "../components/cart/OrderSummary";
 import { cartService } from "../services/cartService";
 
-// DEV: tạm thời hardcode hoặc lấy từ login/localStorage
-const getUserId = () => {
-  // return Number(localStorage.getItem("userId")) || 123;
-  return 123;
-};
-
 // Placeholder data vì backend cart response chưa có price/image/variant/size
 const PLACEHOLDER_IMAGE =
     "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png";
 
 const CartPage = () => {
-  const userId = useMemo(() => getUserId(), []);
-
   const [loading, setLoading] = useState(true);
   const [cartResponse, setCartResponse] = useState(null);
   const [error, setError] = useState("");
 
+  const authErrorMessage = "Vui long dang nhap de su dung gio hang.";
+  const isAuthError = (e) => [401, 403].includes(e?.response?.status);
 
   const readLocalCart = () => {
     try {
@@ -58,12 +52,12 @@ const CartPage = () => {
     return items.map((it) => ({
       id: it.id,
       backendItemId: null,
-      name: it.skuCode,
+      name: it.name || it.skuCode,
       variant: it.color || "Default",
       size: it.size || "N/A",
-      price: 0,
+      price: it.price || 0,
       quantity: it.quantity ?? 0,
-      image: PLACEHOLDER_IMAGE,
+      image: it.image || PLACEHOLDER_IMAGE,
     }));
   }, [localCart, cartResponse]);
 
@@ -76,11 +70,34 @@ const CartPage = () => {
     try {
       setError("");
       setLoading(true);
-      const data = await cartService.getCart(userId);
+      const data = await cartService.getCart();
       setCartResponse(data);
+      if (data?.items?.length) {
+        const nextLocalCart = {
+          items: data.items.map((it) => ({
+            id: `local-${it.id ?? "item"}-${it.size || "N-A"}-${it.color || "N-A"}`,
+            backendItemId: it.id ?? null,
+            productId: it.productId ?? null,
+            skuCode: it.skuCode,
+            name: it.name || it.skuCode,
+            price: it.price || 0,
+            image: it.image || PLACEHOLDER_IMAGE,
+            size: it.size || "N/A",
+            color: it.color || "Default",
+            quantity: it.quantity ?? 0,
+          })),
+          updatedAt: new Date().toISOString(),
+        };
+        writeLocalCart(nextLocalCart);
+        setLocalCart(nextLocalCart);
+      }
     } catch (e) {
       console.error(e);
-      setError("Failed to load cart. Please make sure API Gateway + Eureka + Order Service are running.");
+      if (isAuthError(e)) {
+        setError(authErrorMessage);
+      } else {
+        setError("Failed to load cart. Please make sure API Gateway + Eureka + Order Service are running.");
+      }
     } finally {
       setLoading(false);
     }
@@ -106,13 +123,12 @@ const CartPage = () => {
       if (current.backendItemId != null) {
         try {
           await cartService.updateQuantity({
-            userId,
-            itemId: current.backendItemId,
-            quantity: nextQty,
-          });
+             itemId: current.backendItemId,
+             quantity: nextQty,
+           });
         } catch (e) {
           console.error(e);
-          setError("Failed to update quantity.");
+          setError(isAuthError(e) ? authErrorMessage : "Failed to update quantity.");
           return;
         }
       }
@@ -140,14 +156,13 @@ const CartPage = () => {
       setError("");
       // Backend: quantity <= 0 sẽ tự xoá item (theo logic bạn)
       const updated = await cartService.updateQuantity({
-        userId,
-        itemId,
-        quantity: nextQty,
-      });
+         itemId,
+         quantity: nextQty,
+       });
       setCartResponse(updated);
     } catch (e) {
       console.error(e);
-      setError("Failed to update quantity.");
+      setError(isAuthError(e) ? authErrorMessage : "Failed to update quantity.");
     }
   };
 
@@ -163,10 +178,10 @@ const CartPage = () => {
       const current = items[index];
       if (current.backendItemId != null) {
         try {
-          await cartService.removeItem({ userId, itemId: current.backendItemId });
+          await cartService.removeItem({ itemId: current.backendItemId });
         } catch (e) {
           console.error(e);
-          setError("Failed to remove item.");
+          setError(isAuthError(e) ? authErrorMessage : "Failed to remove item.");
           return;
         }
       }
@@ -181,18 +196,18 @@ const CartPage = () => {
 
     try {
       setError("");
-      const updated = await cartService.removeItem({ userId, itemId });
+      const updated = await cartService.removeItem({ itemId });
       setCartResponse(updated);
     } catch (e) {
       console.error(e);
-      setError("Failed to remove item.");
+      setError(isAuthError(e) ? authErrorMessage : "Failed to remove item.");
     }
   };
 
   // Summary (tạm: price=0 nên subtotal/total sẽ = shipping+tax...)
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shipping = cartItems.length > 0 ? 15.0 : 0.0;
-  const tax = subtotal * 0.08;
+  const shipping = cartItems.length > 0 ? 0.0 : 0.0;
+  const tax = cartItems.length > 0 ? 10.0 : 0.0;
   const total = subtotal + shipping + tax;
 
   return (
