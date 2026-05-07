@@ -54,9 +54,14 @@ public class CartServiceImpl implements CartService {
         if (existingItem != null) {
             int addQty = request.getQuantity() == null ? 0 : request.getQuantity();
             existingItem.setQuantity((existingItem.getQuantity() == null ? 0 : existingItem.getQuantity()) + addQty);
+            mergeItemDetails(existingItem, request);
         } else {
             CartItem newItem = new CartItem();
             newItem.setSkuCode(request.getSkuCode());
+            newItem.setProductId(request.getProductId());
+            newItem.setName(request.getName());
+            newItem.setPrice(request.getPrice());
+            newItem.setImage(request.getImage());
             newItem.setQuantity(request.getQuantity() == null ? 1 : request.getQuantity());
             newItem.setSize(request.getSize());
             newItem.setColor(request.getColor());
@@ -66,6 +71,21 @@ public class CartServiceImpl implements CartService {
 
         Cart saved = cartRepository.save(cart);
         return CartMapper.toResponse(saved);
+    }
+
+    private void mergeItemDetails(CartItem item, AddCartItemRequest request) {
+        if (item.getProductId() == null && request.getProductId() != null) {
+            item.setProductId(request.getProductId());
+        }
+        if (item.getName() == null && request.getName() != null) {
+            item.setName(request.getName());
+        }
+        if (item.getPrice() == null && request.getPrice() != null) {
+            item.setPrice(request.getPrice());
+        }
+        if (item.getImage() == null && request.getImage() != null) {
+            item.setImage(request.getImage());
+        }
     }
 
     private boolean isSameVariant(CartItem item, AddCartItemRequest request) {

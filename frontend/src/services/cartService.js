@@ -1,36 +1,31 @@
 // frontend/src/services/cartService.js
-import axios from "axios";
+import axiosClient from "../api/axiosClient";
 
-const API_BASE_URL = "http://localhost:9000/api";
-
-const api = axios.create({
-    baseURL: API_BASE_URL,
-    headers: { "Content-Type": "application/json" },
-});
+const api = axiosClient;
 
 export const cartService = {
-    getCart: async (userId) => {
-        const res = await api.get("/cart", { params: { userId } });
+    getCart: async () => {
+        const res = await api.get("/api/cart");
         return res.data;
     },
 
-    addItem: async ({ userId, skuCode, quantity, size, color }) => {
-        const res = await api.post("/cart/items", { userId, skuCode, quantity, size, color });
+    addItem: async ({ skuCode, productId, name, price, image, quantity, size, color }) => {
+        const res = await api.post("/api/cart/items", { skuCode, productId, name, price, image, quantity, size, color });
         return res.data; // CartResponse
     },
 
-    updateQuantity: async ({ userId, itemId, quantity }) => {
-        const res = await api.patch(`/cart/items/${itemId}`, { quantity }, { params: { userId } });
+    updateQuantity: async ({ itemId, quantity }) => {
+        const res = await api.patch(`/api/cart/items/${itemId}`, { quantity });
         return res.data; // CartResponse
     },
 
-    removeItem: async ({ userId, itemId }) => {
-        const res = await api.delete(`/cart/items/${itemId}`, { params: { userId } });
+    removeItem: async ({ itemId }) => {
+        const res = await api.delete(`/api/cart/items/${itemId}`);
         return res.data; // CartResponse
     },
 
-    clearCart: async (userId) => {
-        const res = await api.delete("/cart", { params: { userId } });
+    clearCart: async () => {
+        const res = await api.delete("/api/cart");
         return res.data; // CartResponse
     },
 };
