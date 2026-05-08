@@ -1,11 +1,11 @@
 package com.fit.microservices.notification.config;
 
-
 import com.fit.microservices.notification.event.OrderCancelledEvent;
 import com.fit.microservices.notification.event.OrderCompletedEvent;
 import com.fit.microservices.notification.event.OrderPlacedEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
@@ -19,18 +19,35 @@ import java.util.Map;
 @Configuration
 public class KafkaConsumerConfig {
 
-    @Bean
-    public ConsumerFactory<String, OrderPlacedEvent> orderPlacedEventConsumerFactory() {
+    // ✅ FIX: Inject từ application.properties thay vì hardcode "localhost:9092"
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String bootstrapServers;
+
+    // ✅ FIX: Dùng chung một group-id lấy từ properties
+    @Value("${spring.kafka.consumer.group-id}")
+    private String groupId;
+
+    // --- Helper tạo base config để tránh lặp code ---
+    private Map<String, Object> baseConsumerProps() {
         Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-service-group");
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers); // ✅ không hardcode
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);                   // ✅ nhất quán
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-
-        return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(),
-                new JsonDeserializer<>(OrderPlacedEvent.class, false));
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.fit.microservices.*");
+        return props;
     }
+
+    // --- OrderPlacedEvent ---
+    @Bean
+    public ConsumerFactory<String, OrderPlacedEvent> orderPlacedEventConsumerFactory() {
+        return new DefaultKafkaConsumerFactory<>(
+                baseConsumerProps(),
+                new StringDeserializer(),
+                new JsonDeserializer<>(OrderPlacedEvent.class, false)
+        );
+    }
+
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, OrderPlacedEvent> orderPlacedEventListenerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, OrderPlacedEvent> factory =
@@ -39,17 +56,16 @@ public class KafkaConsumerConfig {
         return factory;
     }
 
-    // Consumer cho OrderCompletedEvent
+    // --- OrderCompletedEvent ---
     @Bean
-    public ConsumerFactory<String, OrderCompletedEvent>  orderCompletedEventConsumerFactory() {
-        Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-service-group");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-        return new DefaultKafkaConsumerFactory<>(props,new StringDeserializer(),new JsonDeserializer<>(OrderCompletedEvent.class, false));
+    public ConsumerFactory<String, OrderCompletedEvent> orderCompletedEventConsumerFactory() {
+        return new DefaultKafkaConsumerFactory<>(
+                baseConsumerProps(),
+                new StringDeserializer(),
+                new JsonDeserializer<>(OrderCompletedEvent.class, false)
+        );
     }
+
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent> orderCompletedEventListenerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent> factory =
@@ -57,16 +73,19 @@ public class KafkaConsumerConfig {
         factory.setConsumerFactory(orderCompletedEventConsumerFactory());
         return factory;
     }
+
+    // --- OrderCancelledEvent ---
     @Bean
     public ConsumerFactory<String, OrderCancelledEvent> orderCancelledEventConsumerFactory() {
-        Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-cancel-group");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-        return new DefaultKafkaConsumerFactory<>(props,new StringDeserializer(),new JsonDeserializer<>(OrderCancelledEvent.class, false));
+        // ✅ FIX: Dùng cùng groupId thay vì "notification-cancel-group" riêng lẻ
+        Map<String, Object> props = baseConsumerProps();
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new StringDeserializer(),
+                new JsonDeserializer<>(OrderCancelledEvent.class, false)
+        );
     }
+
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, OrderCancelledEvent> orderCancelledEventListenerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, OrderCancelledEvent> factory =
@@ -74,6 +93,4 @@ public class KafkaConsumerConfig {
         factory.setConsumerFactory(orderCancelledEventConsumerFactory());
         return factory;
     }
-
 }
-
