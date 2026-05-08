@@ -16,16 +16,20 @@ public class AuthEventListener {
 
     private final EmailService emailService;
 
-    @KafkaListener(topics = "user-forgot-password-topic", groupId = "notification-group")
+    // ✅ FIX: groupId đổi từ "notification-group" → "notification-service-group"
+    //         nhất quán với application.properties và KafkaConsumerConfig
+    @KafkaListener(topics = "user-forgot-password-topic", groupId = "notification-service-group")
     public void handleForgotPasswordEvent(ForgotPasswordEvent event) {
         log.info("Received forgot password event for email: {}", event.getEmail());
         emailService.sendPasswordResetEmail(event.getEmail(), event.getResetToken());
     }
 
-    @KafkaListener(topics = "user-otp-topic", groupId = "notification-group")
+    // ✅ FIX: groupId đổi từ "notification-group" → "notification-service-group"
+    @KafkaListener(topics = "user-otp-topic", groupId = "notification-service-group")
     public void handleOtpEvent(Map<String, String> payload) {
         String email = payload.get("email");
         String otp = payload.get("otp");
+        log.info("Received OTP event for email: {}", email);
         emailService.sendOtpEmail(email, otp);
     }
 }
