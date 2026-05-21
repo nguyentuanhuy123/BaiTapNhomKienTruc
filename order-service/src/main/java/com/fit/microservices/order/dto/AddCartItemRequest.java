@@ -10,7 +10,12 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AddCartItemRequest {
-    private Long userId;
     private String skuCode;
+    private Long productId;
+    private String name;
+    private Double price;
+    private String image;
     private Integer quantity;
+    private String size;
+    private String color;
 }

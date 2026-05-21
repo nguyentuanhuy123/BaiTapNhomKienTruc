@@ -10,7 +10,7 @@ import com.fit.microservices.order.exception.ProductOutOfStockException;
 import com.fit.microservices.order.model.Order;
 import com.fit.microservices.order.model.OrderLineItem;
 import com.fit.microservices.order.model.OrderStatus;
-import com.fit.microservices.order.producer.OrderEventProducer;
+//import com.fit.microservices.order.producer.OrderEventProducer;
 import com.fit.microservices.order.repository.OrderRepository;
 import com.fit.microservices.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +32,8 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final InventoryClient  inventoryClient;
     private final UserClient  userClient;
-    private final OrderEventProducer orderEventProducer;
+//    private final OrderEventProducer orderEventProducer;
+
     @Override
     public String placeOrder(OrderRequest orderRequest,Long userId) {
         Order order = new Order();
@@ -67,7 +68,7 @@ public class OrderServiceImpl implements OrderService {
         );
 
         //Gửi qua producer
-        orderEventProducer.publishOrderCreated(orderPlacedEvent);
+//        orderEventProducer.publishOrderCreated(orderPlacedEvent);
         return "Order Placed Successfully";
     }
     private OrderLineItem mapToDto(OrderLineItemsDto orderLineItemDto) {
@@ -90,7 +91,8 @@ public class OrderServiceImpl implements OrderService {
                     itemDto.setPrice(item.getPrice());
                     return itemDto;
                 }).toList();
-        UserResponse userResponse = userClient.getUserById(order.getUserId());
+//        UserResponse userResponse = userClient.getUserById(order.getUserId());
+            UserResponse userResponse = null;
         return new OrderResponse(order.getId(),order.getOrderNumber(),items,userResponse);
     }
     private List<OrderCancelEvent.OrderItem> mapOrderItems(Order order) {
@@ -114,7 +116,7 @@ public class OrderServiceImpl implements OrderService {
                         updatedOrder.getUserId(),
                         status.name()
                 );
-                orderEventProducer.publishOrderCompleted(orderCompletedEvent);
+//                orderEventProducer.publishOrderCompleted(orderCompletedEvent);
             }
             if (status == OrderStatus.CANCELLED) {
                 OrderCancelEvent event = new OrderCancelEvent(
@@ -123,7 +125,7 @@ public class OrderServiceImpl implements OrderService {
                         mapOrderItems(updatedOrder),
                         "Order cancelled (payment failed)"
                 );
-                orderEventProducer.publishOrderCancelledEvent(event);
+//                orderEventProducer.publishOrderCancelledEvent(event);
             }
         });
     }

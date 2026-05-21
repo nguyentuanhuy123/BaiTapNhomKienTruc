@@ -24,11 +24,8 @@ public class SecurityConfig {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.DELETE,Endpoints.PUBLIC_DELETE_ENDPOINTS).hasAnyRole("ADMIN","USER")
-                        .requestMatchers(HttpMethod.PUT,Endpoints.ADMIN_PUT_ENDPOINTS).hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/order/**").hasRole("USER")
-                        .requestMatchers(HttpMethod.GET, Endpoints.ADMIN_GET_ENDPOINTS).hasRole("ADMIN")
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/cart/**").hasRole("USER")
+                        .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
@@ -39,4 +36,3 @@ public class SecurityConfig {
         return new JwtAuthFilter();
     }
 }
-

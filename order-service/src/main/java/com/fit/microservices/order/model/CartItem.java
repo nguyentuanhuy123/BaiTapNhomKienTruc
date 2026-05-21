@@ -18,7 +18,13 @@ public class CartItem {
     private Long id;
     @Column(nullable = false)
     private String skuCode;
+    private Long productId;
+    private String name;
+    private Double price;
+    private String image;
     private Integer quantity;
+    private String size;
+    private String color;
     @ManyToOne
     @JoinColumn(name = "cart_id")
     private Cart cart;

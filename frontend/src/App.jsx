@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+
 import LandingPage from './pages/LandingPage';
 import ExplorePage from './pages/ExplorePage';
 import LoginPage from './pages/LoginPage';
@@ -14,6 +15,11 @@ import CheckoutPage from './pages/CheckoutPage';
 import ProfilePage from './pages/ProfilePage';
 import OrdersPage from './pages/OrdersPage';
 import TechnologyPage from './pages/TechnologyPage';
+import WishlistPage from './pages/WishlistPage';
+import NotFoundPage from './pages/NotFoundPage';
+
+import ScrollToTop from './components/common/ScrollToTop';
+import BackToTop from './components/common/BackToTop';
 
 import { AlertProvider } from './contexts/AlertContext';
 import { AuthProvider } from './contexts/AuthContext';
@@ -22,12 +28,12 @@ import { UserStatusProvider } from './contexts/UserStatusContext';
 function App() {
   return (
     <AlertProvider>
-      {/* AuthProvider phải bao ngoài UserStatusProvider vì
-          UserStatusProvider cần đọc user.id từ AuthContext */}
       <AuthProvider>
-        <UserStatusProvider>
-          <Router>
+        <Router>
+          <UserStatusProvider>
             <div className="w-full">
+              <ScrollToTop />
+              <BackToTop />
               <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/explore" element={<ExplorePage />} />
@@ -43,10 +49,12 @@ function App() {
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/orders" element={<OrdersPage />} />
                 <Route path="/technology" element={<TechnologyPage />} />
+                <Route path="/wishlist" element={<WishlistPage />} />
+                <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </div>
-          </Router>
-        </UserStatusProvider>
+          </UserStatusProvider>
+        </Router>
       </AuthProvider>
     </AlertProvider>
   );

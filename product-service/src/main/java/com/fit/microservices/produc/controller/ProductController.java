@@ -1,5 +1,6 @@
 package com.fit.microservices.produc.controller;
 
+import com.fit.microservices.produc.dto.PaginatedResponse;
 import com.fit.microservices.produc.dto.ProductRequest;
 import com.fit.microservices.produc.dto.ProductResponse;
 import com.fit.microservices.produc.dto.UserPrincipal;
@@ -34,8 +35,31 @@ public class ProductController {
     @Operation(summary = "Get all product")
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public List<ProductResponse> findAllProducts() {
-        return productService.findAll();
+    public PaginatedResponse<ProductResponse> findAllProducts(
+            @RequestParam(value = "page", defaultValue = "0", required = false) int page,
+            @RequestParam(value = "size", defaultValue = "10", required = false) int size,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "brand", required = false) String brand,
+            @RequestParam(value = "color", required = false) String color
+    ) {
+        return productService.findAll(page, size, category, brand, color);
+    }
+
+    @Operation(summary = "Get product by ID")
+    @GetMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public ProductResponse findProductById(@PathVariable Long id) {
+        return productService.getProductResponseById(id);
+    }
+
+    @Operation(summary = "Get flash sale products")
+    @GetMapping("/flash-sale")
+    @ResponseStatus(HttpStatus.OK)
+    public PaginatedResponse<ProductResponse> findFlashSaleProducts(
+            @RequestParam(value = "page", defaultValue = "0", required = false) int page,
+            @RequestParam(value = "size", defaultValue = "6", required = false) int size
+    ) {
+        return productService.findFlashSaleProducts(page, size);
     }
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update product")
