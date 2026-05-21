@@ -49,10 +49,13 @@ public class UserEventListener {
     public void handleUserLogoutAll(String userId) {
         log.info("Received LOGOUT ALL event for user: {}", userId);
         Long uid = parseUserId(userId);
+
         userStatusService.forceUserOffline(uid);
+
         messagingTemplate.convertAndSend("/topic/status", Map.of(
                 "userId", uid,
-                "status", "OFFLINE"
+                "status", "FORCE_LOGOUT",
+                "reason", "LOGOUT_ALL"
         ));
     }
 }
