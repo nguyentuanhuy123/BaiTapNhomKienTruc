@@ -1,26 +1,25 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import userApi from '../api/userApi';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState(null); // Lưu thông tin UserResponse
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const intentionalLogoutRef = useRef(false);
 
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem('accessToken');
       const email = localStorage.getItem('userEmail');
-
       if (token && email) {
         try {
-          // Gọi API lấy profile để verify token và lấy data user
           const userData = await userApi.getCurrentUser();
           setUser(userData);
           setIsLoggedIn(true);
         } catch (error) {
-          console.error("Auth initialization failed:", error);
+          console.error('Auth initialization failed:', error);
           localStorage.clear();
           setIsLoggedIn(false);
           setUser(null);
@@ -28,8 +27,23 @@ export const AuthProvider = ({ children }) => {
       }
       setLoading(false);
     };
-
     initializeAuth();
+  }, []);
+
+  useEffect(() => {
+    const handleForceLogout = () => {
+      if (intentionalLogoutRef.current) {
+        intentionalLogoutRef.current = false;
+        return; // tự logout → bỏ qua
+      }
+      // Bị kick từ thiết bị khác (reset password, logout-all)
+      localStorage.clear();
+      setUser(null);
+      setIsLoggedIn(false);
+      window.location.href = '/login?reason=session_revoked';
+    };
+    window.addEventListener('force-logout', handleForceLogout);
+    return () => window.removeEventListener('force-logout', handleForceLogout);
   }, []);
 
   const login = (token, refreshToken, email, role, sessionId) => {
@@ -38,15 +52,14 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('userEmail', email);
     localStorage.setItem('role', role);
     localStorage.setItem('sessionId', sessionId);
-    
-    // Sau khi lưu token, gọi lấy thông tin user ngay
-    userApi.getCurrentUser().then(userData => {
-        setUser(userData);
-        setIsLoggedIn(true);
+    userApi.getCurrentUser().then((userData) => {
+      setUser(userData);
+      setIsLoggedIn(true);
     });
   };
 
   const logout = () => {
+    intentionalLogoutRef.current = true; // đánh dấu tự logout
     localStorage.clear();
     setUser(null);
     setIsLoggedIn(false);

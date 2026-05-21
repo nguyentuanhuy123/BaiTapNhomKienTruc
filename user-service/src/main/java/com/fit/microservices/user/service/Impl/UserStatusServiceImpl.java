@@ -2,7 +2,6 @@ package com.fit.microservices.user.service.Impl;
 
 import com.fit.microservices.user.service.UserStatusService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -15,30 +14,31 @@ public class UserStatusServiceImpl implements UserStatusService {
     private static final String REDIS_KEY_PREFIX = "user:online:";
 
     @Override
-    public void setUserOnline(Long userId) {
+    public Long setUserOnline(Long userId) {
         String key = REDIS_KEY_PREFIX + userId;
-        stringRedisTemplate.opsForValue().increment(key);
+        // increment trả về giá trị mới sau khi cộng
+        Long count = stringRedisTemplate.opsForValue().increment(key);
         stringRedisTemplate.expire(key, Duration.ofDays(1));
+        return count;
     }
 
     @Override
-    public void setUserOffline(Long userId) {
+    public Long setUserOffline(Long userId) {
         String key = REDIS_KEY_PREFIX + userId;
-        String countStr = stringRedisTemplate.opsForValue().get(key);
+        // decrement trả về giá trị mới sau khi trừ
+        Long count = stringRedisTemplate.opsForValue().decrement(key);
 
-        if (countStr != null) {
-            long count = Long.parseLong(countStr);
-            if (count > 1) {
-                stringRedisTemplate.opsForValue().decrement(key);
-            } else {
-                stringRedisTemplate.delete(key);
-            }
+        if (count != null && count <= 0) {
+            stringRedisTemplate.delete(key);
+            return 0L;
         }
+        return count;
     }
 
     @Override
     public boolean isUserOnline(Long userId) {
-        return Boolean.TRUE.equals(stringRedisTemplate.hasKey(REDIS_KEY_PREFIX + userId));
+        String countStr = stringRedisTemplate.opsForValue().get(REDIS_KEY_PREFIX + userId);
+        return countStr != null && Long.parseLong(countStr) > 0;
     }
     public void forceUserOffline(Long userId) {
         stringRedisTemplate.delete(REDIS_KEY_PREFIX + userId);

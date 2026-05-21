@@ -1,25 +1,26 @@
 package com.fit.microservices.auth.security;
 
-import com.fit.microservices.auth.repository.AuthSessionRepository;
+import com.fit.microservices.auth.model.AuthSession;
 import com.fit.microservices.auth.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-    private final AuthSessionRepository authSessionRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private static final String SESSION_KEY_PREFIX = "session:";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -28,7 +29,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
-
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -36,48 +36,38 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = authHeader.substring(7);
 
-        // ❌ validate JWT signature + expiry
-        if (!jwtUtil.isTokenValid(token)) {
+        if (!jwtUtil.isTokenValid(token) || !jwtUtil.isAccessToken(token)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // ❌ chỉ cho access token đi qua
-        if (!jwtUtil.isAccessToken(token)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+        Claims claims     = jwtUtil.extractClaims(token);
+        String email      = claims.getSubject();
+        String role       = claims.get("role", String.class);
+        String sessionId  = claims.get("sessionId", String.class);
 
-        Claims claims = jwtUtil.extractClaims(token);
+        // ✅ Kiểm tra session Redis — trả 401 nếu đã bị thu hồi
+        if (sessionId != null) {
+            Object raw = redisTemplate.opsForValue().get(SESSION_KEY_PREFIX + sessionId);
 
-        String email = claims.getSubject();
-        String role = claims.get("role", String.class);
-        String sessionIdStr = claims.get("sessionId", String.class);
+            boolean revoked = (raw == null)
+                    || (raw instanceof AuthSession s && s.isRevoked());
 
-        // 🔥 CHECK SESSION LIVE (QUAN TRỌNG)
-        if (sessionIdStr != null) {
-            UUID sessionId = UUID.fromString(sessionIdStr);
-
-            boolean sessionValid = authSessionRepository
-                    .findById(sessionId)
-                    .map(s -> !s.isRevoked() && s.getExpiresAt().isAfter(java.time.LocalDateTime.now()))
-                    .orElse(false);
-
-            if (!sessionValid) {
-                filterChain.doFilter(request, response);
+            if (revoked) {
+                sendError(response, "SESSION_REVOKED"); // ✅ trả 401, KHÔNG filterChain
                 return;
             }
         }
 
         UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                        email,
-                        null,
-                        List.of(() -> role)
-                );
-
+                new UsernamePasswordAuthenticationToken(email, null, List.of(() -> role));
         SecurityContextHolder.getContext().setAuthentication(authentication);
-
         filterChain.doFilter(request, response);
+    }
+
+    private void sendError(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"error\":\"" + message + "\"}");
     }
 }

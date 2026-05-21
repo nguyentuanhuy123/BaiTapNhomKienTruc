@@ -40,7 +40,7 @@ export const AlertProvider = ({ children }) => {
 
       {/* UI của Alert Toast */}
       {alert.show && (
-        <div className="fixed top-5 right-5 z-[100] animate-fade-in-left">
+        <div className="fixed top-5 right-5 z-[1002] animate-fade-in-left">
           <div 
             className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border transition-all duration-300 ${
               alert.type === 'success' 

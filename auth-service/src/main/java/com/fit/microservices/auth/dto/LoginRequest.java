@@ -19,4 +19,6 @@ public class LoginRequest {
     private String deviceId;
     private String deviceName;
     private String ipAddress;
+
+    private String deviceToken;
 }

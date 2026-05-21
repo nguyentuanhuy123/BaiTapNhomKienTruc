@@ -11,6 +11,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.support.converter.JsonMessageConverter;
+import org.springframework.kafka.support.converter.RecordMessageConverter;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 
 import java.util.HashMap;
@@ -92,5 +94,11 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(orderCancelledEventConsumerFactory());
         return factory;
+    }
+    @Bean
+    public RecordMessageConverter converter() {
+        // This tells Spring: "If a listener method needs an Object (Map, DTO),
+        // and the record value is a JSON string, use Jackson to convert it."
+        return new JsonMessageConverter();
     }
 }
