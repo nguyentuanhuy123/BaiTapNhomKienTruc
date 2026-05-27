@@ -25,8 +25,8 @@ public class OrderEventListener {
     private final InventoryEventProducer inventoryEventProducer;
 
     @KafkaListener(
-            topics = "orders",
-            groupId = "inventory-service-group-v4",
+            topics = "order_created",
+            groupId = "inventory-service-group",
             containerFactory = "orderPlacedEventListenerFactory"
     )
     @Transactional
@@ -83,7 +83,7 @@ public class OrderEventListener {
 
 
     @KafkaListener(
-            topics = "orders_cancelled",
+            topics = "order_cancelled",
             groupId = "inventory-cancel-group",
             containerFactory = "orderCanceledEventListenerFactory"
     )

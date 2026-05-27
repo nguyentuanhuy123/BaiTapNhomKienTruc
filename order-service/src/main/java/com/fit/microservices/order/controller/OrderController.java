@@ -37,7 +37,7 @@ public class OrderController {
     @Operation(summary = "Place new order")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public String orderPlace(@RequestBody OrderRequest orderRequest) {
+    public OrderResponse orderPlace(@RequestBody OrderRequest orderRequest) {
         Long userId = (Long) SecurityContextHolder.getContext()
                 .getAuthentication()
                 .getPrincipal();

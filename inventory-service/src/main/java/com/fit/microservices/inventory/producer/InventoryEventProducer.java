@@ -10,10 +10,10 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class InventoryEventProducer {
     private final KafkaTemplate<String, Object> kafkaTemplate;
-    public static final String INVENTORY_TOPIC_RESERVED = "inventory-reserved";
-    public static final String INVENTORY_TOPIC_FAILED = "inventory-failed";
+    public static final String INVENTORY_TOPIC_RESERVED = "inventory_deducted";
+    public static final String INVENTORY_TOPIC_FAILED = "inventory_failed";
     public void publishInventoryReserved(Long orderId, String message){
-        InventoryReservedEvent inventoryReservedEvent = new InventoryReservedEvent(orderId, "RESERVED" ,message);
+        InventoryReservedEvent inventoryReservedEvent = new InventoryReservedEvent(orderId, "DEDUCTED" ,message);
         kafkaTemplate.send(INVENTORY_TOPIC_RESERVED, orderId.toString(), inventoryReservedEvent);
     }
     public void publishInventoryFailed(Long orderId, String message){

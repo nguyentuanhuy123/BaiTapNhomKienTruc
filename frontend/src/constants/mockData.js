@@ -53,6 +53,45 @@ export const NEW_ARRIVALS = [
   }
 ];
 
+export const ORDER_HISTORY = [
+  {
+    id: "#VL-90821",
+    date: "May 12, 2024",
+    total: 220.0,
+    status: "Completed",
+    items: [
+      {
+        name: "Velocity Air Max X1",
+        image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDlNG2P_20pGAAH4lD1LeB5XUPjnnrFc1Iqelb0yK_m5pU8LBE-r1o2Qc0s98A3ibTFLgTBWkOL_Of5_oOH0uULbeky0x39_KUNX_WWNODTJMDKHAAG_xht_x1U0gWH71RRXbW_ZtO1ozzj1yI-3cDWy7ha4kOLfSxqzcFYN7BgdKbZ3lfnDHt2k0E7f0EimKNABOUGiiHM7MyaiARflxSGkXj5a0rOM8LI-ylmoHgcPxKHEJvRV5XyWWxtRcZzNNk7Ff5qopsRjeM"
+      }
+    ]
+  },
+  {
+    id: "#VL-88219",
+    date: "May 08, 2024",
+    total: 185.0,
+    status: "Pending",
+    items: [
+      {
+        name: "Cloud Racer 2.0",
+        image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAz8dC1bhFHEAQ2mtNFLQZxqJmpjz1uJPQ9tyYXoNc7rwV15o7-D75288YdtAAKKdypNXvg0TQPkXwx4KrxVYtGLy1Y8QFAJn59CzNJ5ZIWzxeEPSWLJfwOaVcrAYiFm2wa2WCcg3BqmSlLGKsurmYPaiVyBpPBX8RxDPfdD_cljsNm3rmYifWKbkTaYmRTu4dlqrzVuyXY6Dwy_rNMSZ7ANnXgxhHwSNqWEo--SpdWOepwnSFNzUCcqqtmsZdRJbbjCUv5yW_MigY"
+      }
+    ]
+  },
+  {
+    id: "#VL-85412",
+    date: "April 20, 2024",
+    total: 310.0,
+    status: "Cancel",
+    items: [
+      {
+        name: "Aero-Knit X1",
+        image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDlNG2P_20pGAAH4lD1LeB5XUPjnnrFc1Iqelb0yK_m5pU8LBE-r1o2Qc0s98A3ibTFLgTBWkOL_Of5_oOH0uULbeky0x39_KUNX_WWNODTJMDKHAAG_xht_x1U0gWH71RRXbW_ZtO1ozzj1yI-3cDWy7ha4kOLfSxqzcFYN7BgdKbZ3lfnDHt2k0E7f0EimKNABOUGiiHM7MyaiARflxSGkXj5a0rOM8LI-ylmoHgcPxKHEJvRV5XyWWxtRcZzNNk7Ff5qopsRjeM"
+      }
+    ]
+  }
+];
+
 export const TECH_FEATURES = [
   {
     icon: "bubble_chart",

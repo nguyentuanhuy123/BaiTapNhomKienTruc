@@ -1,18 +1,157 @@
-import React, { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
+import { cartService } from '../services/cartService';
+import { orderService } from '../services/orderService'; // Add order service
 
 const CheckoutPage = () => {
   const [step, setStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [paymentMethod, setPaymentMethod] = useState('');
   const [shippingMethod, setShippingMethod] = useState('standard');
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState(null); // Track the created order ID
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false); // Track polling state
+  const [shippingAddress, setShippingAddress] = useState({
+    firstName: '',
+    lastName: '',
+    street: '',
+  });
 
-  const cartItems = [
-    { id: 1, name: "Velocity Pro 1.0", size: "10.5", color: "Neon Pulse", qty: 1, price: 180.00, image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDlNG2P_20pGAAH4lD1LeB5XUPjnnrFc1Iqelb0yK_m5pU8LBE-r1o2Qc0s98A3ibTFLgTBWkOL_Of5_oOH0uULbeky0x39_KUNX_WWNODTJMDKHAAG_xht_x1U0gWH71RRXbW_ZtO1ozzj1yI-3cDWy7ha4kOLfSxqzcFYN7BgdKbZ3lfnDHt2k0E7f0EimKNABOUGiiHM7MyaiARflxSGkXj5a0rOM8LI-ylmoHgcPxKHEJvRV5XyWWxtRcZzNNk7Ff5qopsRjeM" },
-    { id: 2, name: "StepTech Socks", size: "L", color: "Arctic White", qty: 2, price: 24.00, image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAz8dC1bhFHEAQ2mtNFLQZxqJmpjz1uJPQ9tyYXoNc7rwV15o7-D75288YdtAAKKdypNXvg0TQPkXwx4KrxVYtGLy1Y8QFAJn59CzNNj1yI-3cDWy7ha4kOLfSxqzcFYN7BgdKbZ3lfnDHt2k0E7f0EimKNABOUGiiHM7MyaiARflxSGkXj5a0rOM8LI-ylmoHgcPxKHEJvRV5XyWWxtRcZzNNk7Ff5qopsRjeM" }
-  ];
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const handleAddressChange = (key) => (event) => {
+    setShippingAddress((prev) => ({ ...prev, [key]: event.target.value }));
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCart = async () => {
+      try {
+        setError('');
+        setLoading(true);
+        const data = await cartService.getCart();
+        const items = (data?.items || []).map((it) => ({
+          id: it.id,
+          name: it.name || it.skuCode,
+          size: it.size || 'N/A',
+          color: it.color || 'Default',
+          qty: it.quantity ?? 0,
+          price: it.price || 0,
+          image: it.image || 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png',
+        }));
+        if (isMounted) {
+          setCartItems(items);
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setError('Failed to load cart. Please try again.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchCart();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const subtotal = useMemo(
+    () => cartItems.reduce((acc, item) => acc + item.price * item.qty, 0),
+    [cartItems]
+  );
+  const shipping = cartItems.length > 0 ? (shippingMethod === 'priority' ? 5 : 2) : 0;
+  const estimatedTax = cartItems.length > 0 ? 10 : 0;
+  const total = subtotal + shipping + estimatedTax;
+
+  const generateOrderDraft = () => {
+    return {
+      orderLineItemsDtoList: cartItems.map((it) => ({
+        productId: it.id,
+        skuCode: it.skuCode || it.name, // Adjust based on your mapping
+        color: it.color,
+        size: it.size,
+        quantity: it.qty,
+      })),
+      shippingMethod,
+      shippingFirstName: shippingAddress.firstName,
+      shippingLastName: shippingAddress.lastName,
+      shippingStreet: shippingAddress.street,
+      paymentMethod
+    };
+  };
+
+  const handleContinueToPayment = async () => {
+    try {
+      setError('');
+      setIsProcessingOrder(true);
+      const payload = generateOrderDraft();
+      
+      // Call API to create order (Returns PENDING state)
+      // Note: adjust the response destructuring based on how your backend returns data.
+      // If it returns a plain string, you'll need to fetch the last order or modify the backend to return JSON.
+      // Assuming backend is mapped to return an object with id and status.
+      const response = await orderService.createOrder(payload); 
+      
+      // Let's assume the backend returns the order ID as a string or in an object
+      const orderId = response?.orderId || response?.id || response; 
+      setCurrentOrderId(orderId);
+
+      // Start polling
+      pollOrderStatus(orderId);
+      
+    } catch (err) {
+      console.error(err);
+      setError('Đã xảy ra lỗi khi tạo đơn hàng. Vui lòng thử lại.');
+      setIsProcessingOrder(false);
+    }
+  };
+
+  const pollOrderStatus = (orderId) => {
+    const maxRetries = 20; // e.g. poll for 1 minute max (20 * 3s)
+    let retries = 0;
+
+    const intervalId = setInterval(async () => {
+      try {
+        const orderData = await orderService.getOrder(orderId);
+        
+        // Cần đảm bảo backend OrderResponse có trường chỉ ra status (ví dụ: orderStatus)
+        const status = orderData.orderStatus || orderData.status;
+
+        if (status === 'AWAITING_PAYMENT') {
+          clearInterval(intervalId);
+          setIsProcessingOrder(false);
+          setStep(2); // Move to payment step
+        } else if (status === 'CANCELLED') {
+          clearInterval(intervalId);
+          setIsProcessingOrder(false);
+          setError('Xin lỗi, sản phẩm không đủ số lượng trong kho.');
+        }
+
+        retries++;
+        if (retries >= maxRetries) {
+          clearInterval(intervalId);
+          setIsProcessingOrder(false);
+          setError('Quá thời gian chờ phản hồi. Vui lòng kiểm tra lại đơn hàng sau.');
+        }
+
+      } catch (err) {
+        console.error('Lỗi khi poll API:', err);
+        // Có thể cân nhắc dừng poll nếu lỗi liên tục, hoặc cứ để retry
+      }
+    }, 3000);
+  };
+
+  const handlePlaceOrder = () => {
+    // Trong tương lai, nút này sẽ gọi PaymentService với currentOrderId
+    setOrderPlaced(true);
+  };
 
   if (orderPlaced) {
     return (
@@ -66,6 +205,23 @@ const CheckoutPage = () => {
         <div className="flex flex-col lg:flex-row gap-12">
           {/* Main Content Area */}
           <div className="flex-1 space-y-10">
+            {error && (
+              <div className="rounded-2xl bg-red-50 px-6 py-4 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+            
+            {/* Loading Overlay when processing order */}
+            {isProcessingOrder && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+                <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm w-full mx-4">
+                  <div className="w-16 h-16 border-4 border-zinc-200 border-t-primary-container rounded-full animate-spin mb-6"></div>
+                  <h3 className="text-xl font-bold text-zinc-900 mb-2">Processing...</h3>
+                  <p className="text-zinc-500 text-center text-sm">Đang kiểm tra tồn kho. Vui lòng không đóng trang này.</p>
+                </div>
+              </div>
+            )}
+
             {step === 1 && (
               <>
                 {/* Shipping Address */}
@@ -79,15 +235,33 @@ const CheckoutPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">First Name</label>
-                      <input type="text" placeholder="John" className="w-full bg-zinc-50 border-none rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container/20 transition-all" />
+                      <input
+                        type="text"
+                        placeholder="John"
+                        value={shippingAddress.firstName}
+                        onChange={handleAddressChange('firstName')}
+                        className="w-full bg-zinc-50 border-none rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container/20 transition-all"
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Last Name</label>
-                      <input type="text" placeholder="Doe" className="w-full bg-zinc-50 border-none rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container/20 transition-all" />
+                      <input
+                        type="text"
+                        placeholder="Doe"
+                        value={shippingAddress.lastName}
+                        onChange={handleAddressChange('lastName')}
+                        className="w-full bg-zinc-50 border-none rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container/20 transition-all"
+                      />
                     </div>
                     <div className="md:col-span-2 space-y-2">
                       <label className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-1">Street Address</label>
-                      <input type="text" placeholder="123 Performance Way" className="w-full bg-zinc-50 border-none rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container/20 transition-all" />
+                      <input
+                        type="text"
+                        placeholder="123 Performance Way"
+                        value={shippingAddress.street}
+                        onChange={handleAddressChange('street')}
+                        className="w-full bg-zinc-50 border-none rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container/20 transition-all"
+                      />
                     </div>
                   </div>
                 </section>
@@ -179,12 +353,20 @@ const CheckoutPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="p-6 bg-zinc-50 rounded-2xl">
                       <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3">Shipping to</p>
-                      <p className="font-bold text-zinc-900">John Doe</p>
-                      <p className="text-sm text-zinc-500">123 Performance Way, Portland, Oregon</p>
+                      <p className="font-bold text-zinc-900">
+                        {shippingAddress.firstName || shippingAddress.lastName
+                          ? `${shippingAddress.firstName} ${shippingAddress.lastName}`.trim()
+                          : 'Your Name'}
+                      </p>
+                      <p className="text-sm text-zinc-500">
+                        {shippingAddress.street || 'Your Address'}
+                      </p>
                     </div>
                     <div className="p-6 bg-zinc-50 rounded-2xl">
                       <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3">Payment via</p>
-                      <p className="font-bold text-zinc-900">{paymentMethod === 'cod' ? 'Cash on Delivery' : 'VNPay Wallet'}</p>
+                      <p className="font-bold text-zinc-900">
+                        {paymentMethod === 'cod' ? 'Cash on Delivery' : paymentMethod === 'vnpay' ? 'VNPay Wallet' : 'Not Selected'}
+                      </p>
                       <p className="text-sm text-zinc-500">Standard Delivery (3-5 Days)</p>
                     </div>
                   </div>
@@ -197,6 +379,9 @@ const CheckoutPage = () => {
                           <span className="font-bold text-zinc-900">${(item.price * item.qty).toFixed(2)}</span>
                         </div>
                       ))}
+                      {!loading && cartItems.length === 0 && (
+                        <p className="text-sm text-zinc-400">Your cart is empty.</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -221,8 +406,18 @@ const CheckoutPage = () => {
               )}
               
               <button 
-                onClick={() => step < 3 ? setStep(step + 1) : setOrderPlaced(true)}
-                className="bg-primary-container text-white px-10 py-4 rounded-2xl font-bold shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+                onClick={() => {
+                  console.log('orderDraft', generateOrderDraft());
+                  if (step === 1) {
+                    handleContinueToPayment();
+                  } else if (step === 2) {
+                    setStep(3);
+                  } else {
+                    handlePlaceOrder();
+                  }
+                }}
+                disabled={isProcessingOrder}
+                className="bg-primary-container text-white px-10 py-4 rounded-2xl font-bold shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50 disabled:hover:scale-100"
               >
                 {step === 3 ? 'Place Order' : 'Continue'}
                 <span className="material-symbols-outlined">arrow_forward</span>
@@ -248,44 +443,41 @@ const CheckoutPage = () => {
                     <p className="font-bold text-sm text-zinc-900">${(item.price * item.qty).toFixed(2)}</p>
                   </div>
                 ))}
+                {!loading && cartItems.length === 0 && (
+                  <p className="text-sm text-zinc-400">Your cart is empty.</p>
+                )}
               </div>
 
               <div className="space-y-4 pt-6 border-t border-zinc-100 mb-8">
-                <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Subtotal</span>
-                  <span className="font-bold text-zinc-900">$228.00</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Shipping</span>
-                  <span className="font-black text-primary-container uppercase text-xs">Free</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-zinc-500">Estimated Tax</span>
-                  <span className="font-bold text-zinc-900">$18.24</span>
-                </div>
-              </div>
+                 <div className="flex justify-between text-sm">
+                   <span className="text-zinc-500">Subtotal</span>
+                   <span className="font-bold text-zinc-900">${subtotal.toFixed(2)}</span>
+                 </div>
+                 <div className="flex justify-between text-sm">
+                   <span className="text-zinc-500">Shipping</span>
+                   {shipping === 0 ? (
+                     <span className="font-black text-primary-container uppercase text-xs">Free</span>
+                   ) : (
+                     <span className="font-bold text-zinc-900">${shipping.toFixed(2)}</span>
+                   )}
+                 </div>
+                 <div className="flex justify-between text-sm">
+                   <span className="text-zinc-500">Estimated Tax</span>
+                   <span className="font-bold text-zinc-900">${estimatedTax.toFixed(2)}</span>
+                 </div>
+               </div>
 
-              <div className="flex justify-between items-end mb-10">
-                <span className="text-2xl font-black font-space-grotesk italic">Total</span>
-                <span className="text-3xl font-black text-primary-container font-space-grotesk italic">$246.24</span>
-              </div>
-
-              <button className="w-full bg-primary-container text-white font-bold py-5 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
-                Complete Secure Purchase
-              </button>
-
-              <div className="mt-6 flex items-center justify-center gap-2 text-zinc-400">
-                <span className="material-symbols-outlined text-sm">lock</span>
-                <span className="text-[10px] font-bold uppercase tracking-widest">SSL Encrypted Checkout</span>
-              </div>
-            </div>
-          </div>
+               <div className="flex justify-between items-end mb-10">
+                 <span className="text-2xl font-black font-space-grotesk italic">Total</span>
+                 <span className="text-3xl font-black text-primary-container font-space-grotesk italic">${total.toFixed(2)}</span>
+               </div>
+             </div>
+           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 };
 
 export default CheckoutPage;
+

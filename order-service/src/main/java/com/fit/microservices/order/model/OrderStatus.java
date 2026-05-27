@@ -1,5 +1,5 @@
 package com.fit.microservices.order.model;
 
 public enum OrderStatus {
-    PENDING,COMPLETED,CANCELLED
+    PENDING, AWAITING_PAYMENT, COMPLETED, CANCELLED
 }
