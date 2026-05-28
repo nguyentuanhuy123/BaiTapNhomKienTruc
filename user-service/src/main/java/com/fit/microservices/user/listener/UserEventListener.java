@@ -40,7 +40,6 @@ public class UserEventListener {
             String cleaned = objectMapper.readValue(raw, String.class);
 
             // CASE 3: double-encoded JSON string  →  "\"5\""  unwraps to  "5"
-            //         Try to unwrap one more layer if it looks like a JSON string
             if (cleaned.startsWith("\"") && cleaned.endsWith("\"")) {
                 try {
                     cleaned = objectMapper.readValue(cleaned, String.class);
@@ -55,18 +54,23 @@ public class UserEventListener {
         }
     }
 
+    /**
+     * FIX: Chỉ broadcast ONLINE lên WebSocket.
+     * KHÔNG gọi userStatusService.setUserOnline() ở đây — WebSocketEventListener
+     * đã quản lý counter Redis (user:online:<id>) khi client mở WebSocket connection.
+     * Gọi thêm ở đây sẽ double-count: counter bị +2 khi login (1 lần từ Kafka,
+     * 1 lần từ WebSocket connect), dẫn đến user không bao giờ về trạng thái OFFLINE
+     * sau khi đóng tab (vì phải decrement 2 lần nhưng chỉ có 1 disconnect event).
+     */
     @KafkaListener(
             topics = "user-login-topic",
             groupId = "user-service"
     )
     public void handleUserLogin(String userId) {
-
         log.info("Received LOGIN event: {}", userId);
-
         Long uid = parseUserId(userId);
 
-        userStatusService.setUserOnline(uid);
-
+        // Chỉ broadcast — counter do WebSocketEventListener quản lý
         messagingTemplate.convertAndSend(
                 "/topic/status",
                 Map.of(
@@ -76,18 +80,21 @@ public class UserEventListener {
         );
     }
 
+    /**
+     * FIX: Chỉ broadcast OFFLINE lên WebSocket.
+     * Tương tự handleUserLogin, KHÔNG gọi setUserOffline() ở đây.
+     * WebSocketEventListener.handleDisconnect() sẽ decrement counter và
+     * broadcast OFFLINE khi không còn tab nào mở.
+     */
     @KafkaListener(
             topics = "user-logout-topic",
             groupId = "user-service"
     )
     public void handleUserLogout(String userId) {
-
         log.info("Received LOGOUT event: {}", userId);
-
         Long uid = parseUserId(userId);
 
-        userStatusService.setUserOffline(uid);
-
+        // Chỉ broadcast — counter do WebSocketEventListener quản lý
         messagingTemplate.convertAndSend(
                 "/topic/status",
                 Map.of(
@@ -97,16 +104,24 @@ public class UserEventListener {
         );
     }
 
+    /**
+     * logout-all / force logout:
+     * Đây là trường hợp đặc biệt — cần XOÁ HOÀN TOÀN counter Redis
+     * (forceUserOffline) vì user bị đăng xuất khỏi mọi thiết bị.
+     * WebSocket clients sẽ ngắt kết nối sau khi nhận FORCE_LOGOUT,
+     * nhưng lúc đó counter đã bị xóa nên handleDisconnect sẽ không
+     * broadcast thêm OFFLINE nữa (decrement trên key không tồn tại → -1 → delete → 0L,
+     * nhưng client đã nhận FORCE_LOGOUT rồi nên OFFLINE sau đó là vô hại).
+     */
     @KafkaListener(
             topics = "user-logout-all-topic",
             groupId = "user-service"
     )
     public void handleUserLogoutAll(String userId) {
-
         log.info("Received LOGOUT ALL event: {}", userId);
-
         Long uid = parseUserId(userId);
 
+        // Force clear counter — hợp lệ vì user bị đăng xuất toàn bộ session
         userStatusService.forceUserOffline(uid);
 
         messagingTemplate.convertAndSend(
