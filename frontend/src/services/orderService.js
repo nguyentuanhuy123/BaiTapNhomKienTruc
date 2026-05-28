@@ -1,15 +1,10 @@
-import axios from 'axios';
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api', // Adjust base URL as needed
-  withCredentials: true,
-});
+import axiosClient from '../api/axiosClient';
 
 export const orderService = {
   createOrder: async (orderData) => {
     try {
-      const response = await api.post('/order', orderData);
-      return response.data; // Expecting { id: "123", status: "PENDING" } or similar
+      const response = await axiosClient.post('/api/order', orderData);
+      return response.data; // Expecting { orderId: "123", orderStatus: "PENDING" } or similar
     } catch (error) {
       console.error('Lỗi khi tạo đơn hàng:', error);
       throw error;
@@ -18,12 +13,11 @@ export const orderService = {
   
   getOrder: async (id) => {
     try {
-      const response = await api.get(`/order/${id}`);
-      return response.data; // Expecting { id: "123", orderStatus: "AWAITING_PAYMENT" } or similar
+      const response = await axiosClient.get(`/api/order/${id}`);
+      return response.data; // Expecting { orderId: "123", orderStatus: "AWAITING_PAYMENT" } or similar
     } catch (error) {
       console.error('Lỗi khi lấy thông tin đơn hàng:', error);
       throw error;
     }
   }
 };
-

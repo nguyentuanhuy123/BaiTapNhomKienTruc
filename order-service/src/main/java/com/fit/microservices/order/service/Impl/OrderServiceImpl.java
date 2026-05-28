@@ -54,14 +54,22 @@ public class OrderServiceImpl implements OrderService {
             OrderLineItem item = mapToDto(dto);
             
             // Get product info from Product Service
-            ProductResponse productInfo = productClient.getProductById(dto.getProductId());
+            ProductResponse productInfo;
+            try {
+                productInfo = productClient.getProductById(dto.getProductId());
+            } catch (feign.FeignException.NotFound e) {
+                throw new RuntimeException("Product not found with id: " + dto.getProductId());
+            } catch (feign.FeignException e) {
+                throw new RuntimeException("Error fetching product data for id: " + dto.getProductId() + ". Error: " + e.getMessage());
+            }
+
             if(productInfo == null) {
                 throw new RuntimeException("Product not found with id: " + dto.getProductId());
             }
             
             // Set actual price and name
-            item.setPrice(productInfo.getPrice());
-            item.setProductName(productInfo.getName());
+            item.setPrice(productInfo.getPrice() != null ? productInfo.getPrice() : java.math.BigDecimal.ZERO);
+            item.setProductName(productInfo.getName() != null ? productInfo.getName() : "Unknown");
             item.setSkuCode(productInfo.getSkuCode() != null ? productInfo.getSkuCode() : dto.getSkuCode());
             item.setOrder(order); // set bidirectional reference
             
@@ -161,6 +169,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void updateOrderStatus(Long orderId, OrderStatus status) {
         orderRepository.findById(orderId).ifPresent(order -> {
+            OrderStatus previousStatus = order.getOrderStatus();
+            if (previousStatus == status) {
+                return; // Tránh lặp vô tận (Infinite Loop Prevention)
+            }
             order.setOrderStatus(status);
             Order updatedOrder = orderRepository.save(order);
             System.out.println("Đã cập nhật trạng thái đơn hàng: " + status);
@@ -183,11 +195,12 @@ public class OrderServiceImpl implements OrderService {
                 orderEventProducer.publishOrderCompleted(orderCompletedEvent);
             }
             if (status == OrderStatus.CANCELLED) {
+                String reason = (previousStatus == OrderStatus.PENDING) ? "INVENTORY_FAILED" : "PAYMENT_FAILED";
                 OrderCancelEvent event = new OrderCancelEvent(
                         updatedOrder.getId(),
                         updatedOrder.getUserId(),
                         mapOrderItems(updatedOrder),
-                        "Order cancelled (Saga Rollback)"
+                        reason
                 );
                 orderEventProducer.publishOrderCancelledEvent(event);
             }

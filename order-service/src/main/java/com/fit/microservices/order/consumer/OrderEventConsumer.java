@@ -15,13 +15,13 @@ import org.springframework.stereotype.Service;
 public class OrderEventConsumer {
     private final OrderService orderService;
 
-    @KafkaListener(topics = "inventory_deducted", groupId = "order-group")
+    @KafkaListener(topics = "inventory_deducted", groupId = "order-group", containerFactory = "inventoryDeductedKafkaListenerContainerFactory")
     public void handleInventoryDeducted(InventoryDeductedEvent event) {
         System.out.println("Nhận InventoryDeductedEvent cho order: " + event.getOrderId());
         orderService.updateOrderStatus(event.getOrderId(), OrderStatus.AWAITING_PAYMENT);
     }
 
-    @KafkaListener(topics = "inventory_failed", groupId = "order-group")
+    @KafkaListener(topics = "inventory_failed", groupId = "order-group", containerFactory = "inventoryFailedKafkaListenerContainerFactory")
     public void handleInventoryFailed(InventoryFailedEvent inventoryFailedEvent) {
         System.out.println("Nhận InventoryFailedEvent cho order: " + inventoryFailedEvent.getOrderId()
                 + ", Lý do: " + inventoryFailedEvent.getMessage()
@@ -29,13 +29,13 @@ public class OrderEventConsumer {
         orderService.updateOrderStatus(inventoryFailedEvent.getOrderId(),OrderStatus.CANCELLED);
     }
 
-    @KafkaListener(topics = "payment_completed", groupId = "order-group")
+    @KafkaListener(topics = "payment_completed", groupId = "order-group", containerFactory = "paymentCompletedKafkaListenerContainerFactory")
     public void handlePaymentCompleted(PaymentCompletedEvent paymentCompletedEvent) {
         System.out.println("Nhận PaymentCompletedEvent cho order: "+paymentCompletedEvent.getOrderId());
         orderService.updateOrderStatus(paymentCompletedEvent.getOrderId(), OrderStatus.COMPLETED);
     }
 
-    @KafkaListener(topics = "payment_failed", groupId = "order-group")
+    @KafkaListener(topics = "payment_failed", groupId = "order-group", containerFactory = "paymentFailedKafkaListenerContainerFactory")
     public void handlePaymentFailed(PaymentFailedEvent paymentFailedEvent) {
         System.out.println("Nhận PaymentFailedEvent cho order: "+paymentFailedEvent.getOrderId());
         orderService.updateOrderStatus(paymentFailedEvent.getOrderId(),OrderStatus.CANCELLED);

@@ -92,8 +92,8 @@ export const UserStatusProvider = ({ children }) => {
       }
     });
 
-    stompClient.activate();
-    clientRef.current = stompClient;
+    // stompClient.activate();
+    // clientRef.current = stompClient;
 
     // 3. Cleanup function: QUAN TRỌNG để tránh Zombie session
     return () => {

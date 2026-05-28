@@ -92,6 +92,11 @@ public class OrderEventListener {
 
         log.info("Nhận OrderCancelledEvent: {}", event);
 
+        if ("INVENTORY_FAILED".equals(event.getReason())) {
+            log.info("Order {} bị huỷ do lỗi kho, bỏ qua bước hoàn kho.", event.getOrderId());
+            return;
+        }
+
         List<String> skuCodes = event.getItems()
                 .stream()
                 .map(OrderCancelEvent.OrderItem::getSkuCode)
@@ -115,11 +120,7 @@ public class OrderEventListener {
             );
         }
         inventoryRepository.saveAll(inventories);
-        inventoryEventProducer.publishInventoryFailed(
-                event.getOrderId(),
-                "Inventory released successfully"
-        );
-        log.info("Release stock thành công cho order {}", event.getOrderId(),event.getReason());
+        log.info("Release stock thành công cho order {}. Lý do: {}", event.getOrderId(), event.getReason());
     }
 
 }

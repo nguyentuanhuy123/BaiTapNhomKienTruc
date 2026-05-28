@@ -1100,7 +1100,7 @@
     </column>
     <column id="331" parent="295" name="order_status">
       <Position>3</Position>
-      <StoredType>enum(&apos;CANCELLED&apos;, &apos;COMPLETED&apos;, &apos;PENDING&apos;)|0e</StoredType>
+      <StoredType>enum(&apos;PENDING&apos;, &apos;AWAITING_PAYMENT&apos;, &apos;COMPLETED&apos;, &apos;CANCELLED&apos;)|0e</StoredType>
     </column>
     <column id="332" parent="295" name="total_price">
       <Position>4</Position>

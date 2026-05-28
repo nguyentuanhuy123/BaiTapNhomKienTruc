@@ -73,5 +73,23 @@
         </introspection-scope>
       </schema-mapping>
     </data-source>
+    <data-source name="@localhost-inventoryService" uuid="0ded53c4-8266-41b8-9c86-7367d760bd2b">
+      <database-info product="MySQL" version="8.3.0" jdbc-version="4.2" driver-name="MySQL Connector/J" driver-version="mysql-connector-j-9.5.0 (Revision: a7b3c94f50efbddb9f0dd69b3e0d1aaa25305cd6)" dbms="MYSQL" exact-version="8.3.0" exact-driver-version="9.5">
+        <extra-name-characters>$</extra-name-characters>
+        <identifier-quote-string>`</identifier-quote-string>
+        <jdbc-catalog-is-schema>true</jdbc-catalog-is-schema>
+      </database-info>
+      <case-sensitivity plain-identifiers="exact" quoted-identifiers="exact" />
+      <secret-storage>master_key</secret-storage>
+      <user-name>appuser</user-name>
+      <schema-mapping>
+        <introspection-scope>
+          <node kind="schema">
+            <name qname="@" />
+            <name qname="inventory_service" />
+          </node>
+        </introspection-scope>
+      </schema-mapping>
+    </data-source>
   </component>
 </project>

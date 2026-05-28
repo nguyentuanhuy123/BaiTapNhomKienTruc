@@ -34,7 +34,9 @@ const CheckoutPage = () => {
         const data = await cartService.getCart();
         const items = (data?.items || []).map((it) => ({
           id: it.id,
+          productId: it.productId || it.id, // Store actual productId
           name: it.name || it.skuCode,
+          skuCode: it.skuCode,
           size: it.size || 'N/A',
           color: it.color || 'Default',
           qty: it.quantity ?? 0,
@@ -73,7 +75,7 @@ const CheckoutPage = () => {
   const generateOrderDraft = () => {
     return {
       orderLineItemsDtoList: cartItems.map((it) => ({
-        productId: it.id,
+        productId: it.productId,
         skuCode: it.skuCode || it.name, // Adjust based on your mapping
         color: it.color,
         size: it.size,
