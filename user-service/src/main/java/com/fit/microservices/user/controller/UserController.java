@@ -1,8 +1,6 @@
 package com.fit.microservices.user.controller;
 
-import com.fit.microservices.user.dto.UpdateProfileRequest;
-import com.fit.microservices.user.dto.UserRequest;
-import com.fit.microservices.user.dto.UserResponse;
+import com.fit.microservices.user.dto.*;
 import com.fit.microservices.user.model.User;
 import com.fit.microservices.user.repository.UserRepository;
 import com.fit.microservices.user.service.UserService;
@@ -114,6 +112,40 @@ public class UserController {
             @RequestPart("file") MultipartFile file) throws IOException {
 
         UserResponse updated = userService.updateAvatar(email, file);
+        return ResponseEntity.ok(updated);
+    }
+    // ─── Phone OTP ───────────────────────────────────────────────────────────────
+
+    /**
+     * POST /api/user/me/phone/send-otp
+     * Body: { "phone": "+84912345678" }
+     * Tạo OTP, lưu Redis 5 phút, gửi Kafka → notification-service gửi SMS.
+     */
+    @Operation(summary = "Send OTP to verify a new phone number")
+    @PostMapping("/me/phone/send-otp")
+    public ResponseEntity<Map<String, String>> sendPhoneOtp(
+            @RequestHeader("X-User-Email") String email,
+            @Valid @RequestBody PhoneOtpRequest request) {
+
+        userService.sendPhoneOtp(email, request.getPhone());
+        return ResponseEntity.ok(Map.of(
+                "message", "Mã OTP đã được gửi tới " + request.getPhone()
+        ));
+    }
+
+    /**
+     * POST /api/user/me/phone/verify-otp
+     * Body: { "phone": "+84912345678", "otp": "123456" }
+     * Xác minh OTP → cập nhật phone trong DB.
+     */
+    @Operation(summary = "Verify OTP and save phone number")
+    @PostMapping("/me/phone/verify-otp")
+    public ResponseEntity<UserResponse> verifyPhoneOtp(
+            @RequestHeader("X-User-Email") String email,
+            @Valid @RequestBody PhoneVerifyRequest request) {
+
+        UserResponse updated = userService.verifyPhoneOtp(
+                email, request.getPhone(), request.getOtp());
         return ResponseEntity.ok(updated);
     }
 }

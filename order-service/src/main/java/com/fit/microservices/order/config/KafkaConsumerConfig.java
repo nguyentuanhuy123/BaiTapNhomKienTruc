@@ -1,6 +1,7 @@
 package com.fit.microservices.order.config;
 
 
+import com.fit.microservices.order.event.InventoryDeductedEvent;
 import com.fit.microservices.order.event.InventoryFailedEvent;
 import com.fit.microservices.order.event.PaymentCompletedEvent;
 import com.fit.microservices.order.event.PaymentFailedEvent;
@@ -9,6 +10,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
@@ -17,6 +19,7 @@ import org.springframework.kafka.support.serializer.JsonDeserializer;
 import java.util.HashMap;
 import java.util.Map;
 
+@EnableKafka
 @Configuration
 public class KafkaConsumerConfig {
     @Value("${spring.kafka.bootstrap-servers}")
@@ -37,7 +40,7 @@ public class KafkaConsumerConfig {
         return new DefaultKafkaConsumerFactory<>(
                 baseProps("order-service-payment-completed"),
                 new StringDeserializer(),
-                new JsonDeserializer<>(PaymentCompletedEvent.class)
+                new JsonDeserializer<>(PaymentCompletedEvent.class, false)
         );
     }
     @Bean
@@ -51,7 +54,7 @@ public class KafkaConsumerConfig {
         return new DefaultKafkaConsumerFactory<>(
                 baseProps("order-service-payment-failed"),
                 new StringDeserializer(),
-                new JsonDeserializer<>(PaymentFailedEvent.class)
+                new JsonDeserializer<>(PaymentFailedEvent.class, false)
         );
     }
     @Bean
@@ -66,7 +69,7 @@ public class KafkaConsumerConfig {
         return new DefaultKafkaConsumerFactory<>(
                 baseProps("order-service-inventory-failed"),
                 new StringDeserializer(),
-                new JsonDeserializer<>(InventoryFailedEvent.class)
+                new JsonDeserializer<>(InventoryFailedEvent.class, false)
         );
     }
 
@@ -77,6 +80,21 @@ public class KafkaConsumerConfig {
         return factory;
     }
 
+    // InventoryDeductedEvent
+    @Bean
+    public ConsumerFactory<String, InventoryDeductedEvent> inventoryDeductedConsumerFactory(){
+        return new DefaultKafkaConsumerFactory<>(
+                baseProps("order-service-inventory-deducted"),
+                new StringDeserializer(),
+                new JsonDeserializer<>(InventoryDeductedEvent.class, false)
+        );
+    }
 
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, InventoryDeductedEvent> inventoryDeductedKafkaListenerContainerFactory(){
+        ConcurrentKafkaListenerContainerFactory<String, InventoryDeductedEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(inventoryDeductedConsumerFactory());
+        return factory;
+    }
 
 }

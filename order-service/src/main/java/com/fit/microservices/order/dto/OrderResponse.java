@@ -17,10 +17,14 @@ import java.util.List;
 public class OrderResponse {
     private Long id;
     private String orderNumber;
-    private List<OrderLineItemsDto> orderLineItemsDtoList;
-    private UserResponse userResponse;
-    private BigDecimal totalPrice;
-    private OrderStatus orderStatus;
-    private String paymentMethod;
-    private LocalDateTime createdAt;
+    private List<OrderLineItemsDto> orderLineItems;
+    private UserResponse user;
+    private String orderStatus;
+    
+    public OrderResponse(Long id, String orderNumber, List<OrderLineItemsDto> orderLineItems, UserResponse user) {
+        this.id = id;
+        this.orderNumber = orderNumber;
+        this.orderLineItems = orderLineItems;
+        this.user = user;
+    }
 }

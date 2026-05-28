@@ -235,6 +235,10 @@ const Navbar = () => {
                         <span className="material-symbols-outlined text-lg">favorite</span>
                         Wishlist
                       </Link>
+                      <Link to="/orders" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 rounded-xl transition-all">
+                        <span className="material-symbols-outlined text-lg">receipt_long</span>
+                        Orders
+                      </Link>
                       <button 
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"

@@ -5,10 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.apache.kafka.shaded.com.google.protobuf.DescriptorProtos;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
 @Entity
 @Table(
         name = "payments",
@@ -31,9 +31,11 @@ public class Payment {
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 50) // Thêm annotation này
     private PaymentMethod method;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 50) // Thêm annotation này cho an toàn
     private PaymentStatus status;
 
     /** UUID – gửi sang VNPay (vnp_TxnRef) */
@@ -47,6 +49,21 @@ public class Payment {
     @Lob
     @Column(columnDefinition = "LONGTEXT")
     private String paymentUrl;
+
+    // ── Thông tin người mua (dùng để gửi email notification) ──
+    @Column(length = 255)
+    private String userEmail;
+
+    @Column(length = 255)
+    private String userName;
+
+    @Column(length = 500)
+    private String shippingAddress;
+
+    /** JSON string của danh sách items */
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String itemsJson;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -62,5 +79,3 @@ public class Payment {
         updatedAt = LocalDateTime.now();
     }
 }
-
-

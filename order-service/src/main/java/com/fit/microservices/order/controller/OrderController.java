@@ -38,14 +38,14 @@ public class OrderController {
     @Operation(summary = "Place new order")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public String orderPlace(@RequestBody OrderRequest orderRequest) {
+    public OrderResponse orderPlace(@RequestBody OrderRequest orderRequest) {
         Long userId = (Long) SecurityContextHolder.getContext()
                 .getAuthentication()
                 .getPrincipal();
         return orderService.placeOrder(orderRequest,userId);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @Operation(summary = "Get order by ID")
     @GetMapping("/{orderId}")
     public ResponseEntity<OrderResponse> getOrderById(@PathVariable Long orderId) {

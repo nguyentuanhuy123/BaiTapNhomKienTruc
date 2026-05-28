@@ -1,5 +1,6 @@
 package com.fit.microservices.order.consumer;
 
+import com.fit.microservices.order.event.InventoryDeductedEvent;
 import com.fit.microservices.order.event.InventoryFailedEvent;
 import com.fit.microservices.order.event.PaymentCompletedEvent;
 import com.fit.microservices.order.event.PaymentFailedEvent;
@@ -13,30 +14,30 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class OrderEventConsumer {
     private final OrderService orderService;
-    @KafkaListener(
-        topics = "payments",
-        containerFactory = "paymentCompletedKafkaListenerContainerFactory"
-    )
-    public void handlePaymentCompleted(PaymentCompletedEvent paymentCompletedEvent) {
-        System.out.println("Nhận PaymentCompletedEvent: "+paymentCompletedEvent);
-        orderService.updateOrderStatus(paymentCompletedEvent.getOrderId(), OrderStatus.COMPLETED);
-    }
-    @KafkaListener(
-            topics = "payments_failed",
-            containerFactory = "paymentFailedKafkaListenerContainerFactory"
-    )
-    public void handlePaymentFailed(PaymentFailedEvent paymentFailedEvent) {
-        System.out.println("Nhận PaymentFailedEvent: "+paymentFailedEvent);
-        orderService.updateOrderStatus(paymentFailedEvent.getOrderId(),OrderStatus.CANCELLED);
+
+    @KafkaListener(topics = "inventory_deducted", groupId = "order-group", containerFactory = "inventoryDeductedKafkaListenerContainerFactory")
+    public void handleInventoryDeducted(InventoryDeductedEvent event) {
+        System.out.println("Nhận InventoryDeductedEvent cho order: " + event.getOrderId());
+        orderService.updateOrderStatus(event.getOrderId(), OrderStatus.AWAITING_PAYMENT);
     }
 
+    @KafkaListener(topics = "inventory_failed", groupId = "order-group", containerFactory = "inventoryFailedKafkaListenerContainerFactory")
     public void handleInventoryFailed(InventoryFailedEvent inventoryFailedEvent) {
-        System.out.println("Nhận InventoryFailedEvent: "
-                +"OrderId: "+inventoryFailedEvent.getOrderId()
-                +", Status: "+inventoryFailedEvent.getStatus()
-                +", Reason: "+inventoryFailedEvent.getMessage()
+        System.out.println("Nhận InventoryFailedEvent cho order: " + inventoryFailedEvent.getOrderId()
+                + ", Lý do: " + inventoryFailedEvent.getMessage()
         );
         orderService.updateOrderStatus(inventoryFailedEvent.getOrderId(),OrderStatus.CANCELLED);
-        System.out.println("Đơn hàng "+ inventoryFailedEvent.getOrderId() + " đã bị hủy do: " + inventoryFailedEvent.getMessage());
+    }
+
+    @KafkaListener(topics = "payment_completed", groupId = "order-group", containerFactory = "paymentCompletedKafkaListenerContainerFactory")
+    public void handlePaymentCompleted(PaymentCompletedEvent paymentCompletedEvent) {
+        System.out.println("Nhận PaymentCompletedEvent cho order: "+paymentCompletedEvent.getOrderId());
+        orderService.updateOrderStatus(paymentCompletedEvent.getOrderId(), OrderStatus.COMPLETED);
+    }
+
+    @KafkaListener(topics = "payment_failed", groupId = "order-group", containerFactory = "paymentFailedKafkaListenerContainerFactory")
+    public void handlePaymentFailed(PaymentFailedEvent paymentFailedEvent) {
+        System.out.println("Nhận PaymentFailedEvent cho order: "+paymentFailedEvent.getOrderId());
+        orderService.updateOrderStatus(paymentFailedEvent.getOrderId(),OrderStatus.CANCELLED);
     }
 }
