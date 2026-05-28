@@ -12,6 +12,12 @@ import java.util.List;
 @NoArgsConstructor
 public class PaymentRequest {
 
+    /**
+     * Order ID từ order-service (bắt buộc khi FE gọi từ checkout).
+     * Nếu null, service sẽ tự sinh (dùng cho Kafka flow).
+     */
+    private Long orderId;
+
     /** "COD" hoặc "VNPAY" */
     private String paymentMethod;
 

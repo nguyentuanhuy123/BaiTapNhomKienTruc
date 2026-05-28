@@ -82,7 +82,11 @@ public class PaymentServiceImpl implements PaymentService {
     // ── Helper ───────────────────────────────────────────────────────────
     private Payment buildBasePayment(PaymentRequest request) {
         Payment payment = new Payment();
-        payment.setOrderId(orderIdGen.incrementAndGet());
+        // Ưu tiên dùng orderId từ order-service (REST flow từ checkout);
+        // fallback sang auto-gen chỉ dành cho Kafka flow (InventoryReservedEvent).
+        payment.setOrderId(request.getOrderId() != null
+                ? request.getOrderId()
+                : orderIdGen.incrementAndGet());
         payment.setAmount(request.getAmount() != null ? request.getAmount() : BigDecimal.ZERO);
         payment.setTransactionId(UUID.randomUUID().toString());
         payment.setUserEmail(request.getUserEmail());
