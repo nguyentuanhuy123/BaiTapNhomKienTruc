@@ -51,6 +51,15 @@ const authApi = {
         const response = await authClient.post('/register', data);
         return response.data;
     },
+    /**
+     * Đăng nhập / đăng ký qua Google.
+     * @param {string} idToken - Credential token từ @react-oauth/google onSuccess
+     * @returns {Promise<LoginResponse>}
+     */
+    googleLogin: async (idToken) => {
+        const response = await authClient.post('/google', { idToken });
+        return response.data;
+    },
 
     /**
      * Làm mới Access Token bằng Refresh Token.

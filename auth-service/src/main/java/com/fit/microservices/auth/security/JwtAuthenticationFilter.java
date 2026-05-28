@@ -1,5 +1,6 @@
 package com.fit.microservices.auth.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fit.microservices.auth.model.AuthSession;
 import com.fit.microservices.auth.util.JwtUtil;
 import io.jsonwebtoken.Claims;
@@ -20,6 +21,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper;
+
     private static final String SESSION_KEY_PREFIX = "session:";
 
     @Override
@@ -29,6 +32,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -41,33 +45,58 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        Claims claims     = jwtUtil.extractClaims(token);
-        String email      = claims.getSubject();
-        String role       = claims.get("role", String.class);
-        String sessionId  = claims.get("sessionId", String.class);
+        Claims claims = jwtUtil.extractClaims(token);
 
-        // ✅ Kiểm tra session Redis — trả 401 nếu đã bị thu hồi
+        String email = claims.getSubject();
+        String role = claims.get("role", String.class);
+        String sessionId = claims.get("sessionId", String.class);
+
+        // FORCE LOGOUT CHECK
         if (sessionId != null) {
-            Object raw = redisTemplate.opsForValue().get(SESSION_KEY_PREFIX + sessionId);
 
-            boolean revoked = (raw == null)
-                    || (raw instanceof AuthSession s && s.isRevoked());
+            Object raw = redisTemplate.opsForValue()
+                    .get(SESSION_KEY_PREFIX + sessionId);
 
-            if (revoked) {
-                sendError(response, "SESSION_REVOKED"); // ✅ trả 401, KHÔNG filterChain
+            if (raw == null) {
+                sendError(response, "SESSION_REVOKED");
+                return;
+            }
+
+            AuthSession session;
+
+            if (raw instanceof AuthSession authSession) {
+                session = authSession;
+            } else {
+                session = objectMapper.convertValue(raw, AuthSession.class);
+            }
+
+            if (session.isRevoked()) {
+                sendError(response, "SESSION_REVOKED");
                 return;
             }
         }
 
         UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(email, null, List.of(() -> role));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+                new UsernamePasswordAuthenticationToken(
+                        email,
+                        null,
+                        List.of(() -> role)
+                );
+
+        SecurityContextHolder.getContext()
+                .setAuthentication(authentication);
+
         filterChain.doFilter(request, response);
     }
 
-    private void sendError(HttpServletResponse response, String message) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+    private void sendError(HttpServletResponse response, String message)
+            throws IOException {
+
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
         response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write("{\"error\":\"" + message + "\"}");
+
+        response.getWriter()
+                .write("{\"error\":\"" + message + "\"}");
     }
 }
