@@ -9,7 +9,6 @@ import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
@@ -47,8 +46,8 @@ public class S3ServiceImpl implements S3Service {
                 .key(key)
                 .contentType(file.getContentType())
                 .contentLength(file.getSize())
-                // public-read để frontend có thể truy cập trực tiếp
-                .acl(ObjectCannedACL.PUBLIC_READ)
+                // Không set ACL — bucket dùng "Bucket owner enforced" (ACL bị tắt)
+                // Public access được cấp qua Bucket Policy thay thế
                 .build();
 
         s3Client.putObject(putRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));

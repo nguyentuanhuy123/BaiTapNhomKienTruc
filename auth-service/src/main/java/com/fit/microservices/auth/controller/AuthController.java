@@ -102,6 +102,11 @@ public class AuthController {
         return ResponseEntity.ok("Đổi mật khẩu thành công");
     }
 
+    @PostMapping("/google")
+    public ResponseEntity<LoginResponse> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+        return ResponseEntity.ok(authService.googleLogin(request));
+    }
+
     private String getClientIp(HttpServletRequest request) {
         String xfHeader = request.getHeader("X-Forwarded-For");
         if (xfHeader != null && !xfHeader.isBlank()) {

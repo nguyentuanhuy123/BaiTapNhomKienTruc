@@ -21,4 +21,14 @@ public interface UserService {
      * Upload avatar mới lên S3, xoá avatar cũ nếu có, cập nhật avatarUrl.
      */
     UserResponse updateAvatar(String email, MultipartFile file) throws IOException;
+    /**
+     * Tạo OTP 6 số, lưu Redis 5 phút, gửi qua Kafka để notification-service gửi SMS.
+     */
+    void sendPhoneOtp(String email, String phone);
+
+    /**
+     * Xác minh OTP, nếu đúng → lưu số điện thoại vào DB.
+     * @return UserResponse đã cập nhật
+     */
+    UserResponse verifyPhoneOtp(String email, String phone, String otp);
 }

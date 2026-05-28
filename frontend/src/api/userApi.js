@@ -49,6 +49,35 @@ const userApi = {
     });
     return response.data;
   },
+  /**
+   * Gửi OTP đến số điện thoại để xác minh.
+   * @param {string} phone - Số điện thoại quốc tế, VD: "+84912345678"
+   */
+  sendPhoneOtp: async (phone) => {
+    const email = localStorage.getItem('userEmail');
+    const response = await axiosClient.post(
+      '/api/user/me/phone/send-otp',
+      { phone },
+      { headers: { 'X-User-Email': email } }
+    );
+    return response.data;
+  },
+
+  /**
+   * Xác minh OTP và lưu số điện thoại vào tài khoản.
+   * @param {string} phone - Số điện thoại quốc tế
+   * @param {string} otp   - Mã OTP 6 chữ số
+   * @returns {Promise<UserResponse>} User đã cập nhật
+   */
+  verifyPhoneOtp: async (phone, otp) => {
+    const email = localStorage.getItem('userEmail');
+    const response = await axiosClient.post(
+      '/api/user/me/phone/verify-otp',
+      { phone, otp },
+      { headers: { 'X-User-Email': email } }
+    );
+    return response.data;
+  },
 
   /**
    * Fallback REST poll — dùng khi WebSocket chưa connect

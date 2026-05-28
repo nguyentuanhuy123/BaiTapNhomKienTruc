@@ -15,7 +15,7 @@ const UserStatusContext = createContext(null);
 const WS_URL = (import.meta.env.VITE_USER_SERVICE_URL || 'http://localhost:9000') + '/ws';
 
 export const UserStatusProvider = ({ children }) => {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, forceLogout } = useAuth();
   const clientRef = useRef(null);
   const [statusMap, setStatusMap] = useState({});
   const [connected, setConnected] = useState(false);
@@ -25,7 +25,6 @@ export const UserStatusProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // 1. Kiểm tra điều kiện kết nối
     if (!isLoggedIn || !user?.id) {
       if (clientRef.current) {
         console.info('[WS] Logging out, deactivating...');
@@ -37,19 +36,15 @@ export const UserStatusProvider = ({ children }) => {
       return;
     }
 
-    // 2. Tránh tạo nhiều connection khi component re-render
     if (clientRef.current?.active) return;
 
     const stompClient = new Client({
       webSocketFactory: () => new SockJS(WS_URL),
       connectHeaders: {
-        userId: String(user.id), // Gửi userId để Backend nhận diện trong SessionConnectedEvent
+        userId: String(user.id),
       },
-      
-      // CẤU HÌNH HEARTBEAT: Khớp với thông số 10000ms (10s) của Backend
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
-      
       reconnectDelay: 5000,
 
       onConnect: () => {
@@ -58,19 +53,18 @@ export const UserStatusProvider = ({ children }) => {
 
         stompClient.subscribe('/topic/status', (message) => {
           try {
-            const data = JSON.parse(message.body);
+            console.log('[WS] message body =', message.body);
 
+            const data = JSON.parse(message.body);
             updateStatus(data.userId, data.status);
 
-            const isCurrentUser = String(data.userId) === String(user?.id);
+            const currentUserId = String(user?.id);
+            const incomingUserId = String(data.userId);
 
-            // ✅ force logout cho đúng user hiện tại
-            if (isCurrentUser && data.status === 'FORCE_LOGOUT') {
-              window.dispatchEvent(new Event('force-logout'));
-              return;
+            if (incomingUserId === currentUserId && data.status === 'FORCE_LOGOUT') {
+              console.warn('[WS] FORCE_LOGOUT received for current user');
+              forceLogout();
             }
-
-            // Nếu muốn giữ ONLINE/OFFLINE để hiển thị badge thì cứ để nguyên
           } catch (err) {
             console.error('[WS] Message parsing error:', err);
           }
@@ -85,7 +79,7 @@ export const UserStatusProvider = ({ children }) => {
       onStompError: (frame) => {
         console.error('[WS] STOMP Protocol Error:', frame.headers['message']);
       },
-      
+
       onWebSocketClose: () => {
         setConnected(false);
         console.info('[WS] WebSocket Closed');
@@ -95,7 +89,6 @@ export const UserStatusProvider = ({ children }) => {
     stompClient.activate();
     clientRef.current = stompClient;
 
-    // 3. Cleanup function: QUAN TRỌNG để tránh Zombie session
     return () => {
       if (clientRef.current) {
         console.info('[WS] Cleaning up connection...');
@@ -103,7 +96,7 @@ export const UserStatusProvider = ({ children }) => {
         clientRef.current = null;
       }
     };
-  }, [isLoggedIn, user?.id, updateStatus]);
+  }, [isLoggedIn, user?.id, updateStatus, forceLogout]);
 
   return (
     <UserStatusContext.Provider value={{ statusMap, connected, updateStatus }}>

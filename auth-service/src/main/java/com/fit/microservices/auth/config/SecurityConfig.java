@@ -1,5 +1,6 @@
 package com.fit.microservices.auth.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fit.microservices.auth.security.JwtAuthenticationFilter;
 import com.fit.microservices.auth.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -32,7 +34,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(
-                        new JwtAuthenticationFilter(jwtUtil, redisTemplate),
+                        new JwtAuthenticationFilter(jwtUtil, redisTemplate, objectMapper),
                         UsernamePasswordAuthenticationFilter.class
                 )
                 .sessionManagement(session -> session
