@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef, useCallback } from 'react';
 import userApi from '../api/userApi';
 
 const AuthContext = createContext();
@@ -9,11 +9,18 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const intentionalLogoutRef = useRef(false);
 
+  const forceLogout = useCallback(() => {
+    localStorage.clear();
+    setUser(null);
+    setIsLoggedIn(false);
+    window.location.href = '/login?reason=session_revoked';
+  }, []);
+
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem('accessToken');
-      const email = localStorage.getItem('userEmail');
-      if (token && email) {
+
+      if (token) {
         try {
           const userData = await userApi.getCurrentUser();
           setUser(userData);
@@ -27,6 +34,7 @@ export const AuthProvider = ({ children }) => {
       }
       setLoading(false);
     };
+
     initializeAuth();
   }, []);
 
@@ -34,39 +42,44 @@ export const AuthProvider = ({ children }) => {
     const handleForceLogout = () => {
       if (intentionalLogoutRef.current) {
         intentionalLogoutRef.current = false;
-        return; // tự logout → bỏ qua
+        return;
       }
-      // Bị kick từ thiết bị khác (reset password, logout-all)
-      localStorage.clear();
-      setUser(null);
-      setIsLoggedIn(false);
-      window.location.href = '/login?reason=session_revoked';
+      forceLogout();
     };
+
     window.addEventListener('force-logout', handleForceLogout);
     return () => window.removeEventListener('force-logout', handleForceLogout);
-  }, []);
+  }, [forceLogout]);
 
   const login = (token, refreshToken, email, role, sessionId) => {
     localStorage.setItem('accessToken', token);
     localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('userEmail', email);
-    localStorage.setItem('role', role);
-    localStorage.setItem('sessionId', sessionId);
-    userApi.getCurrentUser().then((userData) => {
-      setUser(userData);
-      setIsLoggedIn(true);
-    });
+
+    if (email) localStorage.setItem('userEmail', email);
+    if (role) localStorage.setItem('role', role);
+    if (sessionId) localStorage.setItem('sessionId', sessionId);
+
+    setIsLoggedIn(true);
+
+    userApi.getCurrentUser()
+      .then((userData) => {
+        if (userData.email) localStorage.setItem('userEmail', userData.email);
+        setUser(userData);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch user after login:', err);
+      });
   };
 
   const logout = () => {
-    intentionalLogoutRef.current = true; // đánh dấu tự logout
+    intentionalLogoutRef.current = true;
     localStorage.clear();
     setUser(null);
     setIsLoggedIn(false);
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, user, login, logout, loading }}>
+    <AuthContext.Provider value={{ isLoggedIn, user, login, logout, forceLogout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -16,10 +16,16 @@ public class User {
     @Column(unique = true)
     private String email;
     private String phone;
+
+    /**
+     * Lưu địa chỉ dạng JSON: {"street":"...","ward":"...","district":"...","city":"..."}
+     * Dùng @Column(columnDefinition = "TEXT") để tránh giới hạn VARCHAR 255.
+     */
+    @Column(columnDefinition = "TEXT")
     private String address;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    // Trong file User.java
     private String avatarUrl;
 
     @PrePersist
