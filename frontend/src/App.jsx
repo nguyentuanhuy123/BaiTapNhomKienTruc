@@ -62,7 +62,6 @@ function App() {
                 <Route path="/orders"            element={<OrdersPage />} />
                 <Route path="/technology"        element={<TechnologyPage />} />
                 <Route path="/wishlist"          element={<WishlistPage />} />
-                
                 {/* Admin Dashboard Nested Routes */}
                 <Route path="/admin"             element={<AdminLayout />}>
                   <Route index                   element={<AdminDashboardPage />} />
@@ -74,7 +73,6 @@ function App() {
                   <Route path="comments"         element={<AdminCommentsPage />} />
                   <Route path="flash-sale"       element={<AdminFlashSalePage />} />
                 </Route>
-
                 <Route path="*"                  element={<NotFoundPage />} />
               </Routes>
             </div>

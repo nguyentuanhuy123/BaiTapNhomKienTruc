@@ -214,6 +214,7 @@ const CheckoutPage = () => {
     fetchUser();
   }, []);
 
+
   // ── Place order ──────────────────────────────────────────────────────
   // const handlePlaceOrder = async () => {
   //   setError('');
