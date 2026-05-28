@@ -17,6 +17,15 @@ import ProfilePage from './pages/ProfilePage';
 import OrdersPage from './pages/OrdersPage';
 import TechnologyPage from './pages/TechnologyPage';
 import WishlistPage from './pages/WishlistPage';
+import AdminFlashSalePage from './pages/AdminFlashSalePage';
+import AdminLayout from './layouts/AdminLayout';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminProductsPage from './pages/AdminProductsPage';
+import AdminAddProductPage from './pages/AdminAddProductPage';
+import AdminCategoriesPage from './pages/AdminCategoriesPage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminOrdersPage from './pages/AdminOrdersPage';
+import AdminCommentsPage from './pages/AdminCommentsPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 import ScrollToTop from './components/common/ScrollToTop';
@@ -53,6 +62,17 @@ function App() {
                 <Route path="/orders"            element={<OrdersPage />} />
                 <Route path="/technology"        element={<TechnologyPage />} />
                 <Route path="/wishlist"          element={<WishlistPage />} />
+                {/* Admin Dashboard Nested Routes */}
+                <Route path="/admin"             element={<AdminLayout />}>
+                  <Route index                   element={<AdminDashboardPage />} />
+                  <Route path="products"         element={<AdminProductsPage />} />
+                  <Route path="products/add"     element={<AdminAddProductPage />} />
+                  <Route path="categories"       element={<AdminCategoriesPage />} />
+                  <Route path="users"            element={<AdminUsersPage />} />
+                  <Route path="orders"           element={<AdminOrdersPage />} />
+                  <Route path="comments"         element={<AdminCommentsPage />} />
+                  <Route path="flash-sale"       element={<AdminFlashSalePage />} />
+                </Route>
                 <Route path="*"                  element={<NotFoundPage />} />
               </Routes>
             </div>

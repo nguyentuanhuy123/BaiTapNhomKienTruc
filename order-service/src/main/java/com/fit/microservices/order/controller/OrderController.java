@@ -22,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.List;
 @Tag(name = "Order API", description = "Operations related to orders")
 @RestController
 @RequestMapping("/api/order")
@@ -50,6 +51,24 @@ public class OrderController {
     public ResponseEntity<OrderResponse> getOrderById(@PathVariable Long orderId) {
         return new ResponseEntity<>(orderService.getOrderById(orderId), HttpStatus.OK);
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get all orders")
+    @GetMapping
+    public ResponseEntity<List<OrderResponse>> getAllOrders() {
+        return new ResponseEntity<>(orderService.getAllOrders(), HttpStatus.OK);
+    }
+    @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Check if user has purchased product")
+    @GetMapping("/has-purchased")
+    public ResponseEntity<Boolean> hasPurchasedProduct(@RequestParam("skuCode") String skuCode) {
+        Long userId = (Long) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+        boolean purchased = orderService.hasPurchasedProduct(userId, skuCode);
+        return new ResponseEntity<>(purchased, HttpStatus.OK);
+    }
+
     public CompletableFuture<String> fallbackMethod(OrderRequest orderRequest, RuntimeException runtimeException) {
         log.info("Cannot Place Order Executing Fallback logic");
         return CompletableFuture.supplyAsync(() -> "Oops! Something went wrong, please order after some time!");

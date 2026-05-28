@@ -24,4 +24,13 @@ public class InventoryController {
         log.info("Received inventory check request for skuCode: {}", skuCode);
         return inventoryService.isInStock(skuCode);
     }
+
+    @Operation(summary = "Create or update inventory")
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public String createOrUpdateInventory(@RequestBody com.fit.microservices.inventory.model.Inventory inventory) {
+        log.info("Saving initial inventory for SKU: {}", inventory.getSkuCode());
+        inventoryService.saveOrUpdate(inventory);
+        return "Stock synchronized successfully!";
+    }
 }

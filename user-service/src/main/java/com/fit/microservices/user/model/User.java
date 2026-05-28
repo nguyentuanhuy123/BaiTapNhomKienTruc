@@ -27,11 +27,23 @@ public class User {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String avatarUrl;
+    private String role;
+
+    public String getRole() {
+        return this.role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
 
     @PrePersist
     public void prePersist() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (this.role == null) {
+            this.role = "USER";
+        }
     }
     @PreUpdate
     public void preUpdate() {

@@ -54,7 +54,6 @@ export const AuthProvider = ({ children }) => {
   const login = (token, refreshToken, email, role, sessionId) => {
     localStorage.setItem('accessToken', token);
     localStorage.setItem('refreshToken', refreshToken);
-
     if (email) localStorage.setItem('userEmail', email);
     if (role) localStorage.setItem('role', role);
     if (sessionId) localStorage.setItem('sessionId', sessionId);

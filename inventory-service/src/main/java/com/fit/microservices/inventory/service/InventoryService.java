@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface InventoryService {
     List<InventoryResponse> isInStock(List<String> skuCode);
+    void saveOrUpdate(com.fit.microservices.inventory.model.Inventory inventory);
 }

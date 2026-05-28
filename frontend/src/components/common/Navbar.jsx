@@ -3,6 +3,70 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, useScroll, useSpring } from 'framer-motion';
 import authApi from '../../api/authApi';
 import { useAuth } from '../../contexts/AuthContext';
+import { notificationService } from '../../services/notificationService';
+
+const UserNotificationBell = () => {
+  const [notifications, setNotifications] = useState(notificationService.getUserNotifications());
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    return notificationService.subscribe(() => {
+      setNotifications(notificationService.getUserNotifications());
+    });
+  }, []);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  return (
+    <div className="relative">
+      <button 
+        onClick={() => {
+          setIsOpen(!isOpen);
+          notificationService.markUserAllAsRead();
+        }}
+        className="material-symbols-outlined text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100/50 p-2.5 rounded-full transition-all relative flex items-center justify-center"
+      >
+        notifications
+        {unreadCount > 0 && (
+          <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[7px] text-white font-bold animate-pulse">
+            {unreadCount}
+          </span>
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full pt-2 z-[200]">
+          <div className="bg-white border border-zinc-100 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] min-w-[320px] max-w-[360px] p-4 overflow-hidden">
+            <div className="flex justify-between items-center mb-3 pb-2 border-b border-zinc-50">
+              <span className="text-xs font-black uppercase tracking-wider text-zinc-900 font-space-grotesk">Thông báo của bạn</span>
+              <button 
+                onClick={() => setIsOpen(false)}
+                className="text-[10px] font-bold text-zinc-400 hover:text-zinc-900 uppercase tracking-widest"
+              >
+                Đóng
+              </button>
+            </div>
+            <div className="space-y-3 max-h-[280px] overflow-y-auto no-scrollbar">
+              {notifications.length > 0 ? (
+                notifications.map(n => (
+                  <div key={n.id} className={`p-3 rounded-xl border transition-all text-left ${n.read ? 'bg-zinc-50/50 border-zinc-100/30' : 'bg-blue-50/20 border-blue-100/40'}`}>
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="text-[10px] font-black text-zinc-950 uppercase leading-snug">{n.title}</span>
+                      <span className="text-[8px] text-zinc-400 font-bold shrink-0">{n.time}</span>
+                    </div>
+                    <p className="text-xs text-zinc-500 leading-tight mt-1">{n.message}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-zinc-400 text-xs font-bold uppercase tracking-wider">Không có thông báo nào</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Navbar = () => {
   const location = useLocation();
@@ -11,6 +75,34 @@ const Navbar = () => {
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  const [cartCount, setCartCount] = useState(0);
+
+  const updateCartCount = () => {
+    try {
+      const raw = localStorage.getItem("cart");
+      if (raw) {
+        const cart = JSON.parse(raw);
+        const count = cart.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+        setCartCount(count);
+      } else {
+        setCartCount(0);
+      }
+    } catch {
+      setCartCount(0);
+    }
+  };
+
+  useEffect(() => {
+    updateCartCount();
+    window.addEventListener("cartUpdated", updateCartCount);
+    // Listen to storage events (e.g. from other tabs)
+    window.addEventListener("storage", updateCartCount);
+    return () => {
+      window.removeEventListener("cartUpdated", updateCartCount);
+      window.removeEventListener("storage", updateCartCount);
+    };
+  }, []);
 
   // Hiệu ứng thanh progress bar từ nhánh develop
   const { scrollYProgress } = useScroll();
@@ -108,9 +200,22 @@ const Navbar = () => {
             <Link to="/explore" className="p-2.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100/50 rounded-full transition-all">
               <span className="material-symbols-outlined text-[22px]">search</span>
             </Link>
-            <Link to="/cart" className="p-2.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100/50 rounded-full transition-all">
+            <Link to="/cart" className="p-2.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100/50 rounded-full transition-all relative flex items-center justify-center">
               <span className="material-symbols-outlined text-[22px]">shopping_cart</span>
+              {cartCount > 0 && (
+                <span 
+                  className="absolute top-1.5 right-1.5 bg-blue-600 text-white rounded-full border-2 border-white flex items-center justify-center text-[9px] font-black font-space-grotesk shadow-md"
+                  style={{ width: '18px', height: '18px', minWidth: '18px', minHeight: '18px' }}
+                >
+                  {cartCount}
+                </span>
+              )}
             </Link>
+
+            {/* Notification Bell Dropdown */}
+            {isLoggedIn && (
+              <UserNotificationBell />
+            )}
 
             {/* Dropdown User Profile từ nhánh feature */}
             <div className="relative group">
@@ -125,6 +230,10 @@ const Navbar = () => {
                       <Link to="/profile" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 rounded-xl transition-all">
                         <span className="material-symbols-outlined text-lg">account_circle</span>
                         Profile
+                      </Link>
+                      <Link to="/wishlist" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 rounded-xl transition-all">
+                        <span className="material-symbols-outlined text-lg">favorite</span>
+                        Wishlist
                       </Link>
                       <Link to="/orders" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 rounded-xl transition-all">
                         <span className="material-symbols-outlined text-lg">receipt_long</span>

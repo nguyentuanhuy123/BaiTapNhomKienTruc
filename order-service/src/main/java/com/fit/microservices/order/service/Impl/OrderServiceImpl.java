@@ -153,9 +153,33 @@ public class OrderServiceImpl implements OrderService {
                 }).toList();
 //        UserResponse userResponse = userClient.getUserById(order.getUserId());
         UserResponse userResponse = null;
-        OrderResponse response = new OrderResponse(order.getId(),order.getOrderNumber(),items,userResponse);
+        OrderResponse response = new OrderResponse(order.getId(), order.getOrderNumber(), items, userResponse);
         response.setOrderStatus(order.getOrderStatus().name());
         return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getAllOrders() {
+        return orderRepository.findAll().stream()
+                .map(order -> {
+                    List<OrderLineItemsDto> items = order.getOrderLineItemsList()
+                            .stream()
+                            .map(item -> {
+                                OrderLineItemsDto itemDto = new OrderLineItemsDto();
+                                itemDto.setProductId(item.getProductId());
+                                itemDto.setSkuCode(item.getSkuCode());
+                                itemDto.setColor(item.getColor());
+                                itemDto.setSize(item.getSize());
+                                itemDto.setQuantity(item.getQuantity());
+                                return itemDto;
+                            }).toList();
+                    UserResponse userResponse = null;
+                    OrderResponse response = new OrderResponse(order.getId(), order.getOrderNumber(), items, userResponse);
+                    response.setOrderStatus(order.getOrderStatus().name());
+                    return response;
+                })
+                .toList();
     }
     private List<OrderCancelEvent.OrderItem> mapOrderItems(Order order) {
         return order.getOrderLineItemsList().stream()
@@ -205,5 +229,24 @@ public class OrderServiceImpl implements OrderService {
                 orderEventProducer.publishOrderCancelledEvent(event);
             }
         });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasPurchasedProduct(Long userId, String skuCode) {
+        List<Order> orders = orderRepository.findByUserId(userId);
+        if (orders == null) {
+            return false;
+        }
+        for (Order order : orders) {
+            if (order.getOrderLineItemsList() != null) {
+                for (OrderLineItem item : order.getOrderLineItemsList()) {
+                    if (item.getSkuCode() != null && item.getSkuCode().equalsIgnoreCase(skuCode)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

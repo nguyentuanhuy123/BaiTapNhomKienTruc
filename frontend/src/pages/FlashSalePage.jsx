@@ -3,101 +3,208 @@ import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import ProductCard from '../components/common/ProductCard';
 import TechBreakdown from '../components/sections/TechBreakdown';
+import { flashSaleService } from '../services/flashSaleService';
 import { productService } from '../services/productService';
 
 const FlashSalePage = () => {
+  const [activeCampaign, setActiveCampaign] = useState(null);
+  const [upcomingCampaign, setUpcomingCampaign] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [timeLeft, setTimeLeft] = useState({ hours: 4, mins: 22, secs: 15 });
+  
+  // Timer state
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, mins: 0, secs: 0 });
+  const [countdownLabel, setCountdownLabel] = useState('Chiến dịch kết thúc sau');
+  const [isCampaignActive, setIsCampaignActive] = useState(false);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const PAGE_SIZE = 8;
+  // Real-time RAM stock levels
+  const [realtimeStocks, setRealtimeStocks] = useState({});
 
   useEffect(() => {
-    const fetchFlashSaleProducts = async () => {
+    fetchCampaignStatus();
+  }, []);
+
+  const fetchCampaignStatus = async () => {
+    try {
+      setLoading(true);
+      
+      // 1. Fetch catalog first to enrich flash sale products with images and details
+      const catalogData = await productService.getAllProducts(0, 100);
+      const catalog = catalogData.content || [];
+
+      // 2. Get currently active campaign
+      let active = null;
       try {
-        setLoading(true);
-        const data = await productService.getFlashSaleProducts(currentPage, PAGE_SIZE);
-        setProducts(data.content || []);
-        setTotalPages(data.totalPages || 0);
-      } catch (error) {
-        console.error('Failed to fetch flash sale products:', error);
-      } finally {
-        setLoading(false);
+        active = await flashSaleService.getActiveCampaign();
+      } catch (err) {
+        console.log('No active flash sale campaign found.');
       }
+
+      if (active) {
+        setActiveCampaign(active);
+        setIsCampaignActive(true);
+        setUpcomingCampaign(null);
+        
+        // Enrich products
+        const enriched = (active.products || []).map(p => {
+          const match = catalog.find(c => (c.skuCode || String(c.id)) === p.productId);
+          return {
+            ...p,
+            image: match?.image || match?.imageResponses?.[0]?.url || '',
+            imageResponses: match?.imageResponses || [],
+            category: match?.categoryName || match?.category || 'Performance',
+            originalPrice: match?.price || 0
+          };
+        });
+        setProducts(enriched);
+      } else {
+        // 3. If no active, search for the nearest upcoming/scheduled campaign
+        const allCampaigns = await flashSaleService.getAllCampaigns();
+        const now = Date.now();
+        const nearestScheduled = allCampaigns
+          .filter(c => c.status === 'SCHEDULED' && c.startTime > now)
+          .sort((a, b) => a.startTime - b.startTime)[0];
+
+        if (nearestScheduled) {
+          setUpcomingCampaign(nearestScheduled);
+          setIsCampaignActive(false);
+          setActiveCampaign(null);
+          
+          // Enrich products
+          const enriched = (nearestScheduled.products || []).map(p => {
+            const match = catalog.find(c => (c.skuCode || String(c.id)) === p.productId);
+            return {
+              ...p,
+              image: match?.image || match?.imageResponses?.[0]?.url || '',
+              imageResponses: match?.imageResponses || [],
+              category: match?.categoryName || match?.category || 'Performance',
+              originalPrice: match?.price || 0
+            };
+          });
+          setProducts(enriched);
+        } else {
+          // No active or upcoming campaigns
+          setUpcomingCampaign(null);
+          setActiveCampaign(null);
+          setIsCampaignActive(false);
+          setProducts([]);
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching flash sale details:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sync Timer based on Campaign state
+  useEffect(() => {
+    let targetTimeMillis = 0;
+    
+    if (isCampaignActive && activeCampaign) {
+      targetTimeMillis = activeCampaign.endTime;
+      setCountdownLabel('Sự kiện kết thúc trong');
+    } else if (!isCampaignActive && upcomingCampaign) {
+      targetTimeMillis = upcomingCampaign.startTime;
+      setCountdownLabel('Mở bán cực sốc sau');
+    } else {
+      setTimeLeft({ hours: 0, mins: 0, secs: 0 });
+      return;
+    }
+
+    const calculateTime = () => {
+      const remainingSeconds = Math.max(0, Math.floor((targetTimeMillis - Date.now()) / 1000));
+      
+      if (remainingSeconds === 0) {
+        // Trigger auto refresh status when countdown finishes!
+        fetchCampaignStatus();
+      }
+
+      const h = Math.floor(remainingSeconds / 3600);
+      const m = Math.floor((remainingSeconds % 3600) / 60);
+      const s = remainingSeconds % 60;
+      setTimeLeft({ hours: h, mins: m, secs: s });
     };
 
-    fetchFlashSaleProducts();
-  }, [currentPage]);
+    calculateTime();
+    const interval = setInterval(calculateTime, 1000);
+    return () => clearInterval(interval);
+  }, [isCampaignActive, activeCampaign, upcomingCampaign]);
 
+  // Poll RAM Stocks from Hazelcast Query side for active products
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        let { hours, mins, secs } = prev;
-        if (secs > 0) secs--;
-        else if (mins > 0) { mins--; secs = 59; }
-        else if (hours > 0) { hours--; mins = 59; secs = 59; }
-        return { hours, mins, secs };
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+    if (products.length === 0 || !isCampaignActive) return;
+
+    const fetchStocks = async () => {
+      const stockUpdates = {};
+      for (const product of products) {
+        const prodKey = product.productId;
+        try {
+          const stockInfo = await flashSaleService.getRealtimeStock(prodKey);
+          stockUpdates[prodKey] = stockInfo.currentStock;
+        } catch (e) {
+          stockUpdates[prodKey] = 0;
+        }
+      }
+      setRealtimeStocks(prev => ({ ...prev, ...stockUpdates }));
+    };
+
+    fetchStocks();
+    const interval = setInterval(fetchStocks, 3000); // Polling every 3 seconds
+    return () => clearInterval(interval);
+  }, [products, isCampaignActive]);
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Navbar />
 
       <main className="flex-1 pt-20">
-        {/* Premium Blue Banner Hero - Matched Exactly to Screenshot */}
+        {/* Premium Blue Banner Hero */}
         <section className="px-margin-mobile md:px-margin-desktop py-12">
           <div className="max-w-container-max mx-auto">
             <div className="bg-primary-container rounded-[48px] p-12 md:p-20 relative overflow-hidden flex flex-col md:flex-row justify-between items-center min-h-[450px]">
 
               <div className="relative z-10 max-w-xl text-center md:text-left">
                 <span className="bg-white/20 backdrop-blur-md text-white text-[10px] px-5 py-2 rounded-full font-black uppercase tracking-[0.2em] mb-8 inline-block border border-white/10">
-                  Limited Time Only
+                  {isCampaignActive ? 'Limited Time Only' : 'Upcoming Event'}
                 </span>
-                <h2 className="text-white text-6xl md:text-[100px] font-space-grotesk font-black mb-8 leading-[0.8] italic uppercase tracking-tighter">
+                <h2 className="text-white text-6xl md:text-[80px] font-space-grotesk font-black mb-8 leading-[0.8] italic uppercase tracking-tighter">
                   Flash <br className="hidden md:block" /> Sale
                 </h2>
                 <p className="text-white/80 text-xl leading-relaxed max-w-md">
-                  Our highest performance silhouettes at their lowest prices ever.
-                  <span className="text-white font-black italic"> Engineered for speed, priced for now.</span>
+                  {isCampaignActive 
+                    ? `Chiến dịch "${activeCampaign?.name}" đang diễn ra sôi động! Săn ngay các mẫu giày hiệu với giá giảm cực sốc.`
+                    : upcomingCampaign 
+                      ? `Lên lịch săn deal cùng "${upcomingCampaign?.name}". Hãy chuẩn bị sẵn sàng cho giờ G!`
+                      : 'Hiện tại chưa có đợt Flash Sale nào được kích hoạt. Hãy quay lại sau nhé!'}
                 </p>
               </div>
 
               {/* Countdown & Shoe Container */}
-              <div className="relative z-10 mt-12 md:mt-0 flex items-center justify-center">
-                {/* Shoe Image behind timer */}
-                <img
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlNG2P_20pGAAH4lD1LeB5XUPjnnrFc1Iqelb0yK_m5pU8LBE-r1o2Qc0s98A3ibTFLgTBWkOL_Of5_oOH0uULbeky0x39_KUNX_WWNODTJMDKHAAG_xht_x1U0gWH71RRXbW_ZtO1ozzj1yI-3cDWy7ha4kOLfSxqzcFYN7BgdKbZ3lfnDHt2k0E7f0EimKNABOUGiiHM7MyaiARflxSGkXj5a0rOM8LI-ylmoHgcPxKHEJvRV5XyWWxtRcZzNNk7Ff5qopsRjeM"
-                  alt="Shoe"
-                  className="absolute -top-1/2 left-1/2 -translate-x-1/2 w-[140%] h-auto opacity-40 mix-blend-screen pointer-events-none transform -rotate-12"
-                />
-
-                {/* Countdown Card */}
-                <div className="bg-white/10 backdrop-blur-3xl border border-white/20 p-10 md:p-14 rounded-[40px] min-w-[340px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)]">
-                  <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.3em] text-center mb-8">Sale Ends In</p>
-                  <div className="flex justify-between items-center gap-6">
-                    <div className="text-center">
-                      <span className="text-5xl md:text-6xl font-black text-white font-space-grotesk italic leading-none">{timeLeft.hours.toString().padStart(2, '0')}</span>
-                      <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mt-3">Hours</p>
-                    </div>
-                    <span className="text-white/20 text-5xl font-light mb-6">:</span>
-                    <div className="text-center">
-                      <span className="text-5xl md:text-6xl font-black text-white font-space-grotesk italic leading-none">{timeLeft.mins.toString().padStart(2, '0')}</span>
-                      <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mt-3">Mins</p>
-                    </div>
-                    <span className="text-white/20 text-5xl font-light mb-6">:</span>
-                    <div className="text-center">
-                      <span className="text-5xl md:text-6xl font-black text-white font-space-grotesk italic leading-none">{timeLeft.secs.toString().padStart(2, '0')}</span>
-                      <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mt-3">Secs</p>
+              {(activeCampaign || upcomingCampaign) && (
+                <div className="relative z-10 mt-12 md:mt-0 flex items-center justify-center">
+                  {/* Countdown Card */}
+                  <div className="bg-white/10 backdrop-blur-3xl border border-white/20 p-10 md:p-14 rounded-[40px] min-w-[340px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)]">
+                    <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.3em] text-center mb-8">{countdownLabel}</p>
+                    <div className="flex justify-between items-center gap-6">
+                      <div className="text-center">
+                        <span className="text-5xl md:text-6xl font-black text-white font-space-grotesk italic leading-none">{timeLeft.hours.toString().padStart(2, '0')}</span>
+                        <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mt-3">Hours</p>
+                      </div>
+                      <span className="text-white/20 text-5xl font-light mb-6">:</span>
+                      <div className="text-center">
+                        <span className="text-5xl md:text-6xl font-black text-white font-space-grotesk italic leading-none">{timeLeft.mins.toString().padStart(2, '0')}</span>
+                        <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mt-3">Mins</p>
+                      </div>
+                      <span className="text-white/20 text-5xl font-light mb-6">:</span>
+                      <div className="text-center">
+                        <span className="text-5xl md:text-6xl font-black text-white font-space-grotesk italic leading-none">{timeLeft.secs.toString().padStart(2, '0')}</span>
+                        <p className="text-white/40 text-[9px] font-black uppercase tracking-widest mt-3">Secs</p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Decorative elements */}
               <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-white/5 rounded-full blur-[100px]"></div>
@@ -109,52 +216,51 @@ const FlashSalePage = () => {
         <section className="py-20 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto w-full">
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="h-[350px] bg-zinc-50 animate-pulse rounded-2xl" />
               ))}
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12 mb-32">
-                {products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-
-              {/* Pagination */}
-              {totalPages > 0 && (
-                <div className="mt-16 flex justify-center items-center gap-3">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                    disabled={currentPage === 0}
-                    className={`w-10 h-10 flex items-center justify-center rounded-full border border-zinc-200 transition-all ${currentPage === 0 ? 'text-zinc-200 cursor-not-allowed' : 'text-zinc-400 hover:bg-zinc-50'}`}
-                  >
-                    <span className="material-symbols-outlined">chevron_left</span>
-                  </button>
-
-                  {[...Array(totalPages)].map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentPage(index)}
-                      className={`w-10 h-10 flex items-center justify-center rounded-full font-bold transition-all ${currentPage === index ? 'bg-primary-container text-white' : 'hover:bg-zinc-100 text-zinc-500'}`}
-                    >
-                      {index + 1}
-                    </button>
-                  ))}
-
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                    disabled={currentPage === totalPages - 1}
-                    className={`w-10 h-10 flex items-center justify-center rounded-full border border-zinc-200 transition-all ${currentPage === totalPages - 1 ? 'text-zinc-200 cursor-not-allowed' : 'text-zinc-400 hover:bg-zinc-50'}`}
-                  >
-                    <span className="material-symbols-outlined">chevron_right</span>
-                  </button>
+              {products.length === 0 ? (
+                <div className="text-center py-24 bg-zinc-50 rounded-3xl border border-zinc-100/80 my-10 flex flex-col items-center justify-center">
+                  <span className="material-symbols-outlined text-5xl text-zinc-300 mb-4 animate-bounce">bolt</span>
+                  <p className="text-zinc-500 font-space-grotesk uppercase tracking-widest text-sm font-bold">Hiện tại chưa có đợt Flash Sale nào được kích hoạt</p>
+                  <p className="text-zinc-400 text-xs mt-2">Vui lòng quay lại sau khi đợt mở bán bắt đầu!</p>
                 </div>
-              )}
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12 mb-32">
+                  {products.map((p) => {
+                    const mappedProduct = {
+                      id: p.productId,
+                      skuCode: p.productId,
+                      name: p.name,
+                      price: p.salePrice, // Show the configured discount Flash Sale Price!
+                      oldPrice: p.originalPrice, // Original slashed price
+                      image: p.image,
+                      imageResponses: p.imageResponses,
+                      categoryName: p.category,
+                      stock: isCampaignActive ? (realtimeStocks[p.productId] !== undefined ? realtimeStocks[p.productId] : p.stock) : p.stock
+                    };
 
-              {products.length === 0 && (
-                <div className="text-center py-20">
-                  <p className="text-zinc-500 font-space-grotesk uppercase tracking-widest opacity-50">No flash sale items at the moment</p>
+                    return (
+                      <div key={p.productId} className="relative group transition-all duration-500 hover:scale-[1.01]">
+                        <ProductCard product={mappedProduct} isFlashSale={isCampaignActive} />
+                        {/* Realtime RAM Stock Badge */}
+                        <div className="absolute top-4 right-4 z-20">
+                          {isCampaignActive ? (
+                            <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase text-white shadow-lg tracking-wider ${mappedProduct.stock > 0 ? 'bg-green-600' : 'bg-red-500 animate-pulse'}`}>
+                              RAM STOCK: {mappedProduct.stock}
+                            </span>
+                          ) : (
+                            <span className="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase text-zinc-700 bg-zinc-100 shadow-md tracking-wider">
+                              Sắp mở bán: {mappedProduct.stock} đôi
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </>

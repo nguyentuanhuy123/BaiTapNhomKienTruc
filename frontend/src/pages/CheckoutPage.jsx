@@ -2,10 +2,29 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
+import { useAuth } from '../contexts/AuthContext';
+import { useUserStatusContext } from '../contexts/UserStatusContext';
 import { cartService } from '../services/cartService';
 import { orderService } from '../services/orderService'; // Add order service
+import userApi from '../api/userApi';
+
+const parseAddress = (raw) => {
+  if (!raw) return { street: '', ward: '', district: '', city: '' };
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') return {
+      street: parsed.street || '',
+      ward: parsed.ward || '',
+      district: parsed.district || '',
+      city: parsed.city || '',
+    };
+  } catch (_) {}
+  return { street: raw, ward: '', district: '', city: '' };
+};
 
 const CheckoutPage = () => {
+  const { user } = useAuth();
+  const { sendAdminNotification } = useUserStatusContext();
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [shippingMethod, setShippingMethod] = useState('standard');
@@ -152,6 +171,20 @@ const CheckoutPage = () => {
 
   const handlePlaceOrder = () => {
     // Trong tương lai, nút này sẽ gọi PaymentService với currentOrderId
+    // Notify admin for placing order
+    sendAdminNotification(
+      'Đặt hàng',
+      `Khách hàng ${user?.email || 'john.doe@example.com'} đã đặt hàng thành công. Phương thức: ${paymentMethod === 'cod' ? 'Thanh toán COD' : 'Ví điện tử VNPay'}. Tổng tiền: $${total.toFixed(2)}.`,
+      'order'
+    );
+    // If not COD, also notify for payment
+    if (paymentMethod !== 'cod') {
+      sendAdminNotification(
+        'Thanh toán',
+        `Khách hàng ${user?.email || 'john.doe@example.com'} đã hoàn tất thanh toán $${total.toFixed(2)} qua ví điện tử VNPay.`,
+        'payment'
+      );
+    }
     setOrderPlaced(true);
   };
 
@@ -160,7 +193,6 @@ const CheckoutPage = () => {
     const fetchUser = async () => {
       try {
         const data = await userApi.getCurrentUser();
-        setUserData(data);
         if (data) {
           // Tách fullName thành firstName + lastName
           const parts = (data.fullName || '').trim().split(' ');
@@ -169,7 +201,11 @@ const CheckoutPage = () => {
 
           // Parse địa chỉ JSON từ profile
           const addr = parseAddress(data.address);
-          setForm({ firstName, lastName, ...addr });
+          setShippingAddress({
+            firstName,
+            lastName,
+            street: addr.street || data.address || '',
+          });
         }
       } catch (err) {
         console.error('Không thể tải thông tin người dùng', err);
@@ -178,8 +214,6 @@ const CheckoutPage = () => {
     fetchUser();
   }, []);
 
-  const handleFormChange = (e) =>
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   // ── Place order ──────────────────────────────────────────────────────
   // const handlePlaceOrder = async () => {
@@ -239,14 +273,14 @@ const CheckoutPage = () => {
             <p className="text-zinc-500 mb-4 leading-relaxed">
               Đơn hàng{' '}
               <span className="text-zinc-900 font-bold">
-                #{placedOrderId || 'VT-99281'}
+                #{currentOrderId || 'VT-99281'}
               </span>{' '}
               đã được đặt thành công.
             </p>
-            {form.email && (
+            {user?.email && (
               <p className="text-zinc-400 text-sm mb-10">
                 📧 Email xác nhận đã được gửi đến{' '}
-                <span className="font-semibold text-zinc-600">{form.email}</span>
+                <span className="font-semibold text-zinc-600">{user?.email}</span>
               </p>
             )}
             <Link to="/explore">

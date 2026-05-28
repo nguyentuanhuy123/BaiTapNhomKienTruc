@@ -6,10 +6,16 @@ import com.fit.microservices.user.dto.UserResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 
 public interface UserService {
 
     UserResponse getUserById(Long id);
+
+    /**
+     * Get all users (Admin only)
+     */
+    List<UserResponse> getAllUsers();
 
     /**
      * Cập nhật thông tin cá nhân (fullName, phone, address).
