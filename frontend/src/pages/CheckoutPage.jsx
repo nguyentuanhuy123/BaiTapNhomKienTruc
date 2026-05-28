@@ -2,12 +2,34 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
+import { useAuth } from '../contexts/AuthContext';
+import { useUserStatusContext } from '../contexts/UserStatusContext';
 
 const CheckoutPage = () => {
+  const { user } = useAuth();
+  const { sendAdminNotification } = useUserStatusContext();
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [shippingMethod, setShippingMethod] = useState('standard');
   const [orderPlaced, setOrderPlaced] = useState(false);
+
+  const handlePlaceOrder = () => {
+    // Notify admin for placing order
+    sendAdminNotification(
+      'Đặt hàng',
+      `Khách hàng ${user?.email || 'john.doe@example.com'} đã đặt hàng thành công. Phương thức: ${paymentMethod === 'cod' ? 'Thanh toán COD' : 'Ví điện tử VNPay'}. Tổng tiền: $246.24.`,
+      'order'
+    );
+    // If not COD, also notify for payment
+    if (paymentMethod !== 'cod') {
+      sendAdminNotification(
+        'Thanh toán',
+        `Khách hàng ${user?.email || 'john.doe@example.com'} đã hoàn tất thanh toán $246.24 qua ví điện tử VNPay.`,
+        'payment'
+      );
+    }
+    setOrderPlaced(true);
+  };
 
   const cartItems = [
     { id: 1, name: "Velocity Pro 1.0", size: "10.5", color: "Neon Pulse", qty: 1, price: 180.00, image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDlNG2P_20pGAAH4lD1LeB5XUPjnnrFc1Iqelb0yK_m5pU8LBE-r1o2Qc0s98A3ibTFLgTBWkOL_Of5_oOH0uULbeky0x39_KUNX_WWNODTJMDKHAAG_xht_x1U0gWH71RRXbW_ZtO1ozzj1yI-3cDWy7ha4kOLfSxqzcFYN7BgdKbZ3lfnDHt2k0E7f0EimKNABOUGiiHM7MyaiARflxSGkXj5a0rOM8LI-ylmoHgcPxKHEJvRV5XyWWxtRcZzNNk7Ff5qopsRjeM" },
@@ -221,7 +243,7 @@ const CheckoutPage = () => {
               )}
               
               <button 
-                onClick={() => step < 3 ? setStep(step + 1) : setOrderPlaced(true)}
+                onClick={() => step < 3 ? setStep(step + 1) : handlePlaceOrder()}
                 className="bg-primary-container text-white px-10 py-4 rounded-2xl font-bold shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
               >
                 {step === 3 ? 'Place Order' : 'Continue'}
@@ -270,7 +292,10 @@ const CheckoutPage = () => {
                 <span className="text-3xl font-black text-primary-container font-space-grotesk italic">$246.24</span>
               </div>
 
-              <button className="w-full bg-primary-container text-white font-bold py-5 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
+              <button 
+                onClick={handlePlaceOrder}
+                className="w-full bg-primary-container text-white font-bold py-5 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
                 Complete Secure Purchase
               </button>
 

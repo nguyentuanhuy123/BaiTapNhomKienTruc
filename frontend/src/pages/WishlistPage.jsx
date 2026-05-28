@@ -9,13 +9,16 @@ const WishlistPage = () => {
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const username = localStorage.getItem('userEmail') || 'testuser';
+
   const fetchWishlist = async () => {
     try {
       setLoading(true);
-      const data = await productService.getWishlist('testuser');
-      setWishlist(data);
+      const data = await productService.getWishlist(username);
+      setWishlist(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch wishlist:', error);
+      setWishlist([]);
     } finally {
       setLoading(false);
     }
@@ -27,7 +30,7 @@ const WishlistPage = () => {
 
   const handleToggleWishlist = async (productId) => {
     try {
-      await productService.toggleWishlist('testuser', productId);
+      await productService.toggleWishlist(username, productId);
       // Update local state by removing the item
       setWishlist(wishlist.filter(item => item.id !== productId));
     } catch (error) {

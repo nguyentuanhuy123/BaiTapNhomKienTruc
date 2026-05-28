@@ -2,7 +2,7 @@ import React from 'react';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import Hero from '../components/sections/Hero';
-import FlashSale from '../components/sections/FlashSale';
+import StyleFinder from '../components/sections/StyleFinder';
 import NewArrivals from '../components/sections/NewArrivals';
 import TechBreakdown from '../components/sections/TechBreakdown';
 import Lifestyle from '../components/sections/Lifestyle';
@@ -14,7 +14,7 @@ const LandingPage = () => {
       <Navbar />
       <main>
         <Hero />
-        <FlashSale />
+        <StyleFinder />
         <NewArrivals />
         <TechBreakdown />
         <Lifestyle />

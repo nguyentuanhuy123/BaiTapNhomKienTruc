@@ -10,7 +10,7 @@ import com.fit.microservices.order.exception.ProductOutOfStockException;
 import com.fit.microservices.order.model.Order;
 import com.fit.microservices.order.model.OrderLineItem;
 import com.fit.microservices.order.model.OrderStatus;
-//import com.fit.microservices.order.producer.OrderEventProducer;
+import com.fit.microservices.order.producer.OrderEventProducer;
 import com.fit.microservices.order.repository.OrderRepository;
 import com.fit.microservices.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +32,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final InventoryClient  inventoryClient;
     private final UserClient  userClient;
-//    private final OrderEventProducer orderEventProducer;
+    private final OrderEventProducer orderEventProducer;
 
     @Override
     public String placeOrder(OrderRequest orderRequest,Long userId) {
@@ -68,7 +68,7 @@ public class OrderServiceImpl implements OrderService {
         );
 
         //Gửi qua producer
-//        orderEventProducer.publishOrderCreated(orderPlacedEvent);
+        orderEventProducer.publishOrderCreated(orderPlacedEvent);
         return "Order Placed Successfully";
     }
     private OrderLineItem mapToDto(OrderLineItemsDto orderLineItemDto) {
@@ -92,8 +92,50 @@ public class OrderServiceImpl implements OrderService {
                     return itemDto;
                 }).toList();
 //        UserResponse userResponse = userClient.getUserById(order.getUserId());
-            UserResponse userResponse = null;
-        return new OrderResponse(order.getId(),order.getOrderNumber(),items,userResponse);
+        UserResponse userResponse = null;
+        
+        OrderResponse response = new OrderResponse();
+        response.setId(order.getId());
+        response.setOrderNumber(order.getOrderNumber());
+        response.setOrderLineItemsDtoList(items);
+        response.setUserResponse(userResponse);
+        response.setTotalPrice(order.getTotalPrice());
+        response.setOrderStatus(order.getOrderStatus());
+        response.setPaymentMethod(order.getPaymentMethod());
+        response.setCreatedAt(order.getCreatedAt());
+        
+        return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getAllOrders() {
+        return orderRepository.findAll().stream()
+                .map(order -> {
+                    List<OrderLineItemsDto> items = order.getOrderLineItemsList()
+                            .stream()
+                            .map(item -> {
+                                OrderLineItemsDto itemDto = new OrderLineItemsDto();
+                                itemDto.setSkuCode(item.getSkuCode());
+                                itemDto.setQuantity(item.getQuantity());
+                                itemDto.setPrice(item.getPrice());
+                                return itemDto;
+                            }).toList();
+                    UserResponse userResponse = null;
+                    
+                    OrderResponse response = new OrderResponse();
+                    response.setId(order.getId());
+                    response.setOrderNumber(order.getOrderNumber());
+                    response.setOrderLineItemsDtoList(items);
+                    response.setUserResponse(userResponse);
+                    response.setTotalPrice(order.getTotalPrice());
+                    response.setOrderStatus(order.getOrderStatus());
+                    response.setPaymentMethod(order.getPaymentMethod());
+                    response.setCreatedAt(order.getCreatedAt());
+                    
+                    return response;
+                })
+                .toList();
     }
     private List<OrderCancelEvent.OrderItem> mapOrderItems(Order order) {
         return order.getOrderLineItemsList().stream()
@@ -116,7 +158,7 @@ public class OrderServiceImpl implements OrderService {
                         updatedOrder.getUserId(),
                         status.name()
                 );
-//                orderEventProducer.publishOrderCompleted(orderCompletedEvent);
+                orderEventProducer.publishOrderCompleted(orderCompletedEvent);
             }
             if (status == OrderStatus.CANCELLED) {
                 OrderCancelEvent event = new OrderCancelEvent(
@@ -125,8 +167,27 @@ public class OrderServiceImpl implements OrderService {
                         mapOrderItems(updatedOrder),
                         "Order cancelled (payment failed)"
                 );
-//                orderEventProducer.publishOrderCancelledEvent(event);
+                orderEventProducer.publishOrderCancelledEvent(event);
             }
         });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasPurchasedProduct(Long userId, String skuCode) {
+        List<Order> orders = orderRepository.findByUserId(userId);
+        if (orders == null) {
+            return false;
+        }
+        for (Order order : orders) {
+            if (order.getOrderLineItemsList() != null) {
+                for (OrderLineItem item : order.getOrderLineItemsList()) {
+                    if (item.getSkuCode() != null && item.getSkuCode().equalsIgnoreCase(skuCode)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

@@ -6,21 +6,32 @@ import ProductCard from '../components/common/ProductCard';
 import { productService } from '../services/productService';
 import { useNavigate } from 'react-router-dom';
 import { cartService } from '../services/cartService';
+import { useAuth } from '../contexts/AuthContext';
+import { commentService } from '../services/commentService';
+import { useUserStatusContext } from '../contexts/UserStatusContext';
 
 
 const ProductDetailPage = () => {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { sendAdminNotification } = useUserStatusContext();
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [mainImage, setMainImage] = useState("");
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [isLiked, setIsLiked] = useState(false);
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState({ content: '', rating: 5, username: '' });
+  const { isLoggedIn, user } = useAuth();
+  const [reviews, setReviews] = useState(commentService.getReviewsByProduct(id));
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewContent, setReviewContent] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewImage, setReviewImage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [cartError, setCartError] = useState("");
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [hasPurchased, setHasPurchased] = useState(false);
   const navigate = useNavigate();
 
   const authErrorMessage = "Vui long dang nhap de them san pham vao gio hang.";
@@ -70,12 +81,6 @@ const ProductDetailPage = () => {
           setProduct(null);
         }
 
-        // 2. Secondary Info (Disabled temporarily for auth implementation)
-        /* 
-        productService.getCommentsByProduct(id).then(setComments);
-        productService.isInWishlist('testuser', id).then(setIsLiked);
-        */
-
       } catch (globalError) {
         console.error('Global fetch error:', globalError);
       } finally {
@@ -87,35 +92,87 @@ const ProductDetailPage = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  const handleCommentSubmit = async (e) => {
-    e.preventDefault();
-    if (!newComment.content || !newComment.username) return;
+  useEffect(() => {
+    if (isLoggedIn && user?.email && id) {
+      productService.isInWishlist(user.email, id)
+        .then(setIsLiked)
+        .catch(e => console.warn('Failed to check wishlist status:', e));
+    } else {
+      setIsLiked(false);
+    }
+  }, [isLoggedIn, user, id]);
 
-    try {
-      setSubmitting(true);
-      const savedComment = await productService.addComment({
-        ...newComment,
-        productId: parseInt(id)
-      });
-      setComments([savedComment, ...comments]);
-      setNewComment({ content: '', rating: 5, username: '' });
-    } catch (error) {
-      console.error('Failed to add comment:', error);
-    } finally {
-      setSubmitting(false);
+  useEffect(() => {
+    if (isLoggedIn && product) {
+      const skuCode = product.skuCode || `SKU-${product.id}`;
+      productService.checkPurchase(skuCode)
+        .then(setHasPurchased)
+        .catch(e => {
+          console.warn('Failed to check purchase status:', e);
+          setHasPurchased(false);
+        });
+    } else {
+      setHasPurchased(false);
+    }
+  }, [isLoggedIn, product]);
+
+  useEffect(() => {
+    setReviews(commentService.getReviewsByProduct(id));
+    return commentService.subscribe(() => {
+      setReviews(commentService.getReviewsByProduct(id));
+    });
+  }, [id]);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReviewImage(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
+  const handleCommentSubmit = (e) => {
+    e.preventDefault();
+    if (!reviewTitle || !reviewContent) return;
+
+    setSubmitting(true);
+    const commenterName = user?.name || user?.email || 'Khách hàng';
+    commentService.addReview(id, commenterName, reviewTitle, reviewContent, reviewRating, reviewImage);
+    
+    setReviewTitle('');
+    setReviewContent('');
+    setReviewRating(5);
+    setReviewImage('');
+    setShowReviewForm(false);
+    setSubmitting(false);
+  };
+
+  const handleWriteReviewClick = () => {
+    if (!isLoggedIn) {
+      alert("Vui lòng đăng nhập để đánh giá sản phẩm!");
+      return;
+    }
+    if (!hasPurchased) {
+      alert("🔒 Chỉ những khách hàng đã mua sản phẩm này mới được phép đánh giá!");
+      return;
+    }
+    setShowReviewForm(!showReviewForm);
+  };
+
   const handleWishlistToggle = async () => {
-    // Temporarily disabled API call for auth implementation
-    /*
+    if (!isLoggedIn || !user?.email) {
+      alert("Vui lòng đăng nhập để thêm sản phẩm vào danh sách yêu thích!");
+      return;
+    }
     try {
-      await productService.toggleWishlist('testuser', id);
+      await productService.toggleWishlist(user.email, id);
+      setIsLiked(!isLiked);
     } catch (error) {
       console.error('Failed to toggle wishlist:', error);
     }
-    */
-    setIsLiked(!isLiked); // Keep local UI working
   };
 
 
@@ -181,8 +238,20 @@ const ProductDetailPage = () => {
       localCart.updatedAt = new Date().toISOString();
       writeLocalCart(localCart);
 
-      // 3) Redirect to cart page
-      navigate("/cart");
+      // Dispatch custom event to notify Navbar and other components to update badge count
+      window.dispatchEvent(new Event("cartUpdated"));
+
+      sendAdminNotification(
+        'Thêm giỏ hàng',
+        `Khách hàng ${user?.email || 'Ẩn danh'} đã thêm sản phẩm "${productName}" (Size: ${selectedSize || 'N/A'}, Màu: ${selectedColor || 'N/A'}) vào giỏ hàng.`,
+        'cart'
+      );
+
+      // Show beautiful success toast
+      setShowSuccessToast(true);
+      setTimeout(() => {
+        setShowSuccessToast(false);
+      }, 4000);
     } catch (error) {
       console.error("Failed to add to cart:", error);
       if (isAuthError(error)) {
@@ -222,6 +291,24 @@ const ProductDetailPage = () => {
   return (
     <div className="flex flex-col min-h-screen bg-white selection:bg-blue-100">
       <Navbar />
+
+      {/* Toast Notification */}
+      {showSuccessToast && (
+        <div className="fixed top-24 right-6 z-[2000] transition-all duration-300 ease-out">
+          <div className="bg-zinc-950 text-white border border-zinc-800 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.4)] rounded-2xl p-4 flex items-center gap-4 max-w-sm">
+            <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-400 shrink-0">
+              <span className="material-symbols-outlined text-2xl font-black">check_circle</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] leading-none mb-1.5">Đã thêm vào giỏ hàng</p>
+              <p className="text-xs font-black text-white truncate max-w-[160px] font-space-grotesk">{product?.name}</p>
+            </div>
+            <Link to="/cart" className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest py-2.5 px-4 rounded-xl transition-all shrink-0 shadow-[0_4px_12px_rgba(37,99,235,0.3)]">
+              Xem Giỏ
+            </Link>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 pt-32 pb-20">
         <div className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
@@ -444,58 +531,186 @@ const ProductDetailPage = () => {
               )}
             </div>
           </div>
-
           {/* Customer Reviews */}
-          <div className="border-t border-zinc-100 pt-24">
+          <div className="border-t border-zinc-100 pt-24" id="reviews-section">
             <div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-20">
               <div>
                 <h2 className="text-label-sm font-black text-primary-container uppercase tracking-[0.3em] mb-8">Customer Reviews</h2>
                 <div className="flex items-end gap-6">
-                  <p className="text-7xl font-black font-space-grotesk text-zinc-900 leading-none italic">4.8</p>
+                  <p className="text-7xl font-black font-space-grotesk text-zinc-900 leading-none italic">
+                    {reviews.length > 0 ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1) : "0.0"}
+                  </p>
                   <div className="mb-1">
-                    <div className="flex text-primary-container mb-2">
-                      {[...Array(5)].map((_, j) => <span key={j} className="material-symbols-outlined">star</span>)}
+                    <div className="flex text-amber-500 mb-2">
+                      {[...Array(5)].map((_, j) => <span key={j} className="material-symbols-outlined fill-amber-500 text-sm">star</span>)}
                     </div>
-                    <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Based on 124 reviews</p>
+                    <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Based on {reviews.length} reviews</p>
                   </div>
                 </div>
               </div>
-              <button className="bg-primary-container text-white px-8 py-4 rounded-xl font-bold flex items-center gap-3 shadow-lg hover:scale-105 transition-all">
-                <span className="material-symbols-outlined">edit</span>
-                WRITE A REVIEW
-              </button>
+              {isLoggedIn ? (
+                hasPurchased ? (
+                  <button 
+                    onClick={handleWriteReviewClick}
+                    className="bg-primary-container text-white px-8 py-4 rounded-xl font-bold flex items-center gap-3 shadow-lg hover:scale-105 transition-all uppercase tracking-wider text-xs"
+                  >
+                    <span className="material-symbols-outlined">edit</span>
+                    {showReviewForm ? "Ẩn Form Đánh giá" : "Viết Đánh giá"}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 bg-amber-50 text-amber-800 border border-amber-200/50 rounded-2xl px-6 py-4">
+                    <span className="material-symbols-outlined text-amber-600 text-sm">lock</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">Chỉ khách hàng đã mua sản phẩm mới có thể đánh giá</span>
+                  </div>
+                )
+              ) : (
+                <button 
+                  onClick={handleWriteReviewClick}
+                  className="bg-zinc-100 text-zinc-400 px-8 py-4 rounded-xl font-bold flex items-center gap-3 cursor-not-allowed uppercase tracking-wider text-xs"
+                >
+                  <span className="material-symbols-outlined text-sm">lock</span>
+                  Đăng nhập để đánh giá
+                </button>
+              )}
             </div>
 
+            {/* Write Review Form */}
+            {showReviewForm && (
+              <div className="bg-zinc-50 border border-zinc-100 rounded-[32px] p-8 mb-12 animate-fade-in">
+                <h3 className="text-lg font-black font-space-grotesk text-zinc-900 uppercase italic mb-6">Đánh giá của bạn</h3>
+                <form onSubmit={handleCommentSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Tiêu đề đánh giá</label>
+                      <input
+                        type="text"
+                        required
+                        value={reviewTitle}
+                        onChange={(e) => setReviewTitle(e.target.value)}
+                        placeholder="Ví dụ: Giày rất êm, ôm chân!"
+                        className="w-full bg-white border border-zinc-100 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container transition-all font-bold text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Đánh giá sao ({reviewRating} sao)</label>
+                      <select
+                        value={reviewRating}
+                        onChange={(e) => setReviewRating(parseInt(e.target.value))}
+                        className="w-full bg-white border border-zinc-100 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container transition-all font-bold text-sm"
+                      >
+                        <option value="5">⭐⭐⭐⭐⭐ 5 Sao - Tuyệt hảo</option>
+                        <option value="4">⭐⭐⭐⭐ 4 Sao - Rất tốt</option>
+                        <option value="3">⭐⭐⭐ 3 Sao - Bình thường</option>
+                        <option value="2">⭐⭐ 2 Sao - Tạm ổn</option>
+                        <option value="1">⭐ 1 Sao - Kém</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Nội dung bình luận</label>
+                    <textarea
+                      required
+                      rows="4"
+                      value={reviewContent}
+                      onChange={(e) => setReviewContent(e.target.value)}
+                      placeholder="Chia sẻ trải nghiệm thực tế của bạn khi đi đôi giày này..."
+                      className="w-full bg-white border border-zinc-100 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container transition-all font-bold text-sm"
+                    />
+                  </div>
+
+                  {/* Optional Photo Attachment */}
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Ảnh thực tế đính kèm (Không bắt buộc)</label>
+                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="text-xs text-zinc-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-xs file:font-black file:uppercase file:bg-zinc-900 file:text-white hover:file:bg-zinc-800 file:cursor-pointer"
+                      />
+                      {reviewImage && (
+                        <div className="w-20 h-20 bg-white border border-zinc-100 rounded-xl overflow-hidden p-1 relative">
+                          <img src={reviewImage} alt="Preview" className="w-full h-full object-contain" />
+                          <button
+                            type="button"
+                            onClick={() => setReviewImage('')}
+                            className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="bg-primary-container text-white px-8 py-4 rounded-xl font-bold flex items-center gap-3 shadow-lg hover:scale-105 active:scale-[0.98] transition-all uppercase tracking-wider text-xs"
+                  >
+                    <span className="material-symbols-outlined">send</span>
+                    {submitting ? "Đang gửi..." : "Gửi Đánh giá Của Bạn"}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Reviews List */}
             <div className="space-y-12">
-              {[
-                { title: "ULTIMATE ROAD COMPANION", date: "OCT 12, 2023", name: "MICHAEL R.", content: "The responsiveness of the carbon midsole is a game changer for my training intervals. Transition from mid-foot to toe-off feels incredibly natural and snappy." },
-                { title: "LIGHT AS A FEATHER", date: "OCT 05, 2023", name: "ELENA B.", content: "I was skeptical about the 180g claim until I put them on. It's like wearing socks with extreme propulsion. Highly recommend for competitive runners." }
-              ].map((rev, i) => (
-                <div key={i} className="border-b border-zinc-50 pb-12">
+              {reviews.map((rev) => (
+                <div key={rev.id} className="border-b border-zinc-50 pb-12">
                   <div className="flex justify-between items-start mb-4">
-                    <div className="flex text-primary-container">
-                      {[...Array(5)].map((_, j) => <span key={j} className="material-symbols-outlined text-sm">star</span>)}
+                    <div className="flex text-amber-500 gap-0.5">
+                      {[...Array(rev.rating)].map((_, j) => <span key={j} className="material-symbols-outlined text-sm fill-amber-500">star</span>)}
+                      {[...Array(5 - rev.rating)].map((_, j) => <span key={j} className="material-symbols-outlined text-sm text-zinc-200">star</span>)}
                     </div>
                     <span className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">{rev.date}</span>
                   </div>
                   <h4 className="font-bold text-zinc-900 text-lg mb-4">{rev.title}</h4>
-                  <p className="text-zinc-500 leading-relaxed mb-6">{rev.content}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-zinc-900 font-black text-xs uppercase">{rev.name}</span>
+
+                  {/* Layout content with photo */}
+                  <div className="flex flex-col md:flex-row gap-6 mb-6">
+                    {rev.image && (
+                      <div className="w-32 h-32 bg-zinc-50 border border-zinc-100 rounded-2xl overflow-hidden p-1 shrink-0">
+                        <img src={rev.image} alt="Review attachment" className="w-full h-full object-contain" />
+                      </div>
+                    )}
+                    <p className="text-zinc-500 leading-relaxed self-center">{rev.content}</p>
+                  </div>
+
+                  {/* Verification Badge */}
+                  <div className="flex items-center gap-2 mb-6">
+                    <span className="text-zinc-950 font-black text-xs uppercase">{rev.name}</span>
                     <span className="w-1 h-1 bg-zinc-200 rounded-full"></span>
                     <span className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
                       <span className="material-symbols-outlined text-[12px] text-green-500">verified</span>
-                      Verified Buyer
+                      Đã mua sản phẩm này
                     </span>
                   </div>
+
+                  {/* Nested Admin Replies */}
+                  {rev.replies && rev.replies.map((reply, idx) => (
+                    <div key={idx} className="bg-zinc-50 rounded-2xl p-5 border border-zinc-100 ml-6 md:ml-12 mt-4 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-black text-primary-container uppercase tracking-widest flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">chat_bubble</span>
+                          Phản hồi từ Ban quản trị
+                        </span>
+                        <span className="text-zinc-400 text-[9px] font-bold uppercase tracking-widest">{reply.date}</span>
+                      </div>
+                      <p className="text-xs text-zinc-600 leading-relaxed">{reply.content}</p>
+                    </div>
+                  ))}
                 </div>
               ))}
-            </div>
 
-            <div className="text-center mt-16">
-              <button className="text-primary-container font-black text-xs uppercase tracking-[0.2em] border-b-2 border-primary-container pb-1 hover:text-blue-700 hover:border-blue-700 transition-all">
-                Load More Reviews
-              </button>
+              {reviews.length === 0 && (
+                <div className="text-center py-16 bg-zinc-50 rounded-3xl border border-zinc-100">
+                  <span className="material-symbols-outlined text-4xl text-zinc-300 mb-2 block">forum</span>
+                  <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Chưa có đánh giá nào cho sản phẩm này.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

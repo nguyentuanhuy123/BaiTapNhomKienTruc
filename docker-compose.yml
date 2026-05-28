@@ -112,7 +112,7 @@ services:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     ports:
-      - "8080:8080" # Bạn sẽ truy cập vào localhost:8080
+      - "8888:8888" # Bạn sẽ truy cập vào localhost:8080
     depends_on:
       - kafka
     environment:
@@ -121,17 +121,17 @@ services:
       - DYNAMIC_CONFIG_ENABLED=true
   #Monitoring with prometheus and grafana
   prometheus:
-      image: prom/prometheus
-      ports:
-        - "9090:9090"
-      volumes:
-        - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      restart: unless-stopped
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    restart: unless-stopped
   grafana:
-      image: grafana/grafana
-      ports:
-        - "3000:3000"
-      restart: unless-stopped
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
 volumes:
   product_data:
   user_data:

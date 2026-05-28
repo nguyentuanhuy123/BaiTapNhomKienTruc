@@ -101,7 +101,13 @@ const LoginPage = () => {
       if (response && response.accessToken) {
         login(response.accessToken, response.refreshToken, formData.email, response.role, response.sessionId);
         showAlert('Đăng nhập thành công!', 'success');
-        navigate('/');
+        
+        // Rẽ hướng thông minh dựa trên Role của tài khoản
+        if (response.role === 'ADMIN' || response.role === 'ROLE_ADMIN') {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
       } else {
         showAlert('Vui lòng kiểm tra email để lấy mã OTP!', 'success');
         setStep(2);
@@ -142,7 +148,13 @@ const LoginPage = () => {
 
       login(response.accessToken, response.refreshToken, formData.email, response.role, response.sessionId);
       showAlert('Đăng nhập thành công!', 'success');
-      navigate('/');
+      
+      // Rẽ hướng thông minh dựa trên Role sau khi xác thực OTP
+      if (response.role === 'ADMIN' || response.role === 'ROLE_ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       const message = err.response?.data?.message || 'Xác thực OTP thất bại. Vui lòng thử lại.';
       showAlert(message, 'error');

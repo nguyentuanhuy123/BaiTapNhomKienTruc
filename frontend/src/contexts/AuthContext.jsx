@@ -52,9 +52,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('userEmail', email);
     localStorage.setItem('role', role);
     localStorage.setItem('sessionId', sessionId);
+    setIsLoggedIn(true);
     userApi.getCurrentUser().then((userData) => {
       setUser(userData);
-      setIsLoggedIn(true);
+    }).catch((err) => {
+      console.error('Failed to fetch user data after login:', err);
     });
   };
 

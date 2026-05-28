@@ -9,6 +9,7 @@ import React, {
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { useAuth } from './AuthContext';
+import { notificationService } from '../services/notificationService';
 
 const UserStatusContext = createContext(null);
 
@@ -22,6 +23,20 @@ export const UserStatusProvider = ({ children }) => {
 
   const updateStatus = useCallback((userId, status) => {
     setStatusMap((prev) => ({ ...prev, [String(userId)]: status }));
+  }, []);
+
+  const sendAdminNotification = useCallback((title, message, type = 'general') => {
+    if (clientRef.current && clientRef.current.connected) {
+      clientRef.current.publish({
+        destination: '/topic/admin-notifications',
+        body: JSON.stringify({
+          title,
+          message,
+          type,
+          time: new Date().toLocaleTimeString('vi-VN')
+        })
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -75,6 +90,20 @@ export const UserStatusProvider = ({ children }) => {
             console.error('[WS] Message parsing error:', err);
           }
         });
+
+        // Đăng ký nhận thông báo real-time của Admin nếu user hiện tại có quyền Admin
+        const role = localStorage.getItem('role');
+        if (role === 'ADMIN' || role === 'ROLE_ADMIN') {
+          console.info('[WS Admin] Subscribing to admin notifications...');
+          stompClient.subscribe('/topic/admin-notifications', (message) => {
+            try {
+              const data = JSON.parse(message.body);
+              notificationService.addAdminNotification(data.title, data.message, data.type);
+            } catch (err) {
+              console.error('[WS Admin] Error parsing admin notification:', err);
+            }
+          });
+        }
       },
 
       onDisconnect: () => {
@@ -106,7 +135,7 @@ export const UserStatusProvider = ({ children }) => {
   }, [isLoggedIn, user?.id, updateStatus]);
 
   return (
-    <UserStatusContext.Provider value={{ statusMap, connected, updateStatus }}>
+    <UserStatusContext.Provider value={{ statusMap, connected, updateStatus, sendAdminNotification }}>
       {children}
     </UserStatusContext.Provider>
   );
