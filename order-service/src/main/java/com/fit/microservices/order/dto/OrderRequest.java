@@ -15,5 +15,9 @@ import java.util.List;
 @AllArgsConstructor
 public class OrderRequest {
     private List<OrderLineItemsDto> orderLineItemsDtoList;
-    private BigDecimal totalPrice;
+    private String paymentMethod;
+    private String shippingMethod;
+    private String shippingFirstName;
+    private String shippingLastName;
+    private String shippingStreet;
 }

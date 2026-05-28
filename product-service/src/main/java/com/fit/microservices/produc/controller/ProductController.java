@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -47,9 +48,12 @@ public class ProductController {
 
     @Operation(summary = "Get product by ID")
     @GetMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    public ProductResponse findProductById(@PathVariable Long id) {
-        return productService.getProductResponseById(id);
+    public ResponseEntity<ProductResponse> findProductById(@PathVariable Long id) {
+        ProductResponse response = productService.getProductResponseById(id);
+        if (response == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @Operation(summary = "Get flash sale products")

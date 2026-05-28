@@ -1,41 +1,14 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
+import { ORDER_HISTORY } from '../constants/mockData';
 
 const OrdersPage = () => {
   const [activeTab, setActiveTab] = useState('All');
 
-  const tabs = ['All', 'In Transit', 'Delivered', 'Cancelled'];
+  const tabs = ['All', 'Pending', 'Completed', 'Cancel'];
 
-  const orders = [
-    {
-      id: "#VL-90821",
-      date: "May 12, 2024",
-      total: 220.00,
-      status: "Delivered",
-      items: [
-        { name: "Velocity Air Max X1", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDlNG2P_20pGAAH4lD1LeB5XUPjnnrFc1Iqelb0yK_m5pU8LBE-r1o2Qc0s98A3ibTFLgTBWkOL_Of5_oOH0uULbeky0x39_KUNX_WWNODTJMDKHAAG_xht_x1U0gWH71RRXbW_ZtO1ozzj1yI-3cDWy7ha4kOLfSxqzcFYN7BgdKbZ3lfnDHt2k0E7f0EimKNABOUGiiHM7MyaiARflxSGkXj5a0rOM8LI-ylmoHgcPxKHEJvRV5XyWWxtRcZzNNk7Ff5qopsRjeM" }
-      ]
-    },
-    {
-      id: "#VL-88219",
-      date: "May 08, 2024",
-      total: 185.00,
-      status: "In Transit",
-      items: [
-        { name: "Cloud Racer 2.0", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAz8dC1bhFHEAQ2mtNFLQZxqJmpjz1uJPQ9tyYXoNc7rwV15o7-D75288YdtAAKKdypNXvg0TQPkXwx4KrxVYtGLy1Y8QFAJn59CzNJ5ZIWzxeEPSWLJfwOaVcrAYiFm2wa2WCcg3BqmSlLGKsurmYPaiVyBpPBX8RxDPfdD_cljsNm3rmYifWKbkTaYmRTu4dlqrzVuyXY6Dwy_rNMSZ7ANnXgxhHwSNqWEo--SpdWOepwnSFNzUCcqqtmsZdRJbbjCUv5yW_MigY" }
-      ]
-    },
-    {
-      id: "#VL-85412",
-      date: "April 20, 2024",
-      total: 310.00,
-      status: "Delivered",
-      items: [
-        { name: "Aero-Knit X1", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDlNG2P_20pGAAH4lD1LeB5XUPjnnrFc1Iqelb0yK_m5pU8LBE-r1o2Qc0s98A3ibTFLgTBWkOL_Of5_oOH0uULbeky0x39_KUNX_WWNODTJMDKHAAG_xht_x1U0gWH71RRXbW_ZtO1ozzj1yI-3cDWy7ha4kOLfSxqzcFYN7BgdKbZ3lfnDHt2k0E7f0EimKNABOUGiiHM7MyaiARflxSGkXj5a0rOM8LI-ylmoHgcPxKHEJvRV5XyWWxtRcZzNNk7Ff5qopsRjeM" }
-      ]
-    }
-  ];
+  const orders = ORDER_HISTORY;
 
   const filteredOrders = activeTab === 'All' 
     ? orders 
@@ -85,7 +58,11 @@ const OrdersPage = () => {
                     </div>
                   </div>
                   <div className={`px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest w-fit ${
-                    order.status === 'Delivered' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
+                    order.status === 'Completed'
+                      ? 'bg-green-100 text-green-600'
+                      : order.status === 'Pending'
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-red-100 text-red-600'
                   }`}>
                     {order.status.toUpperCase()}
                   </div>

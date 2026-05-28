@@ -16,4 +16,12 @@ public class OrderResponse {
     private String orderNumber;
     private List<OrderLineItemsDto> orderLineItems;
     private UserResponse user;
+    private String orderStatus;
+    
+    public OrderResponse(Long orderId, String orderNumber, List<OrderLineItemsDto> orderLineItems, UserResponse user) {
+        this.orderId = orderId;
+        this.orderNumber = orderNumber;
+        this.orderLineItems = orderLineItems;
+        this.user = user;
+    }
 }

@@ -163,6 +163,9 @@ public class ProductServiceImpl implements ProductService {
     }
 
     public ProductResponse mapToProductResponse(Product product) {
+        if (product == null) {
+            return null; // or throw a specific exception gracefully
+        }
         List<ImageResponse> imageResponses = product.getImages()
                 .stream()
                 .map(image -> new ImageResponse(image.getId(), image.getUrl()))
