@@ -30,6 +30,8 @@ public class ProductResponse implements Serializable {
     private String upperTech;
     private List<String> colors;
     private List<Double> sizes;
+    private Long categoryId;
     private String categoryName;
+    private String image;
     private List<ImageResponse> imageResponses = new ArrayList<>();
 }

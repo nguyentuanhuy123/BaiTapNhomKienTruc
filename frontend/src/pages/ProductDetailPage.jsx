@@ -56,33 +56,38 @@ const ProductDetailPage = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // 1. Fetch Core Product Info (Must succeed)
-        try {
-          const data = await productService.getProductById(id);
-          if (data) {
-            setProduct(data);
-            
-            // Set default selection
-            if (data.sizes?.length > 0) setSelectedSize(`US ${data.sizes[0]}`);
-            if (data.colors?.length > 0) setSelectedColor(data.colors[0]);
-            if (data.imageResponses?.length > 0) setMainImage(data.imageResponses[0].url);
-            else if (data.image) setMainImage(data.image);
+        const data = await productService.getProductById(id);
 
-            // Fetch related products (optional)
-            productService.getAllProducts(0, 4, data.categoryName)
-              .then(related => {
-                if (related && related.content) {
-                  setRelatedProducts(related.content.filter(p => p.id !== parseInt(id)).slice(0, 4));
-                }
-              }).catch(e => console.warn('Related products failed:', e));
+        if (data) {
+          setProduct(data);
+
+          if (data.sizes?.length > 0) {
+            setSelectedSize(`US ${Number(data.sizes[0])}`);
           }
-        } catch (e) {
-          console.error('Failed to fetch core product info:', e);
-          setProduct(null);
-        }
 
-      } catch (globalError) {
-        console.error('Global fetch error:', globalError);
+          if (data.colors?.length > 0) {
+            setSelectedColor(data.colors[0]);
+          }
+
+          if (data.imageResponses?.length > 0) {
+            setMainImage(data.imageResponses[0].url);
+          } else if (data.image) {
+            setMainImage(data.image);
+          }
+
+          productService.getAllProducts(0, 4, data.categoryName || '')
+            .then(related => {
+              if (related && related.content) {
+                setRelatedProducts(
+                  related.content.filter(p => p.id !== parseInt(id)).slice(0, 4)
+                );
+              }
+            })
+            .catch(e => console.warn('Related products failed:', e));
+        }
+      } catch (e) {
+        console.error('Failed to fetch core product info:', e);
+        setProduct(null);
       } finally {
         setLoading(false);
       }
@@ -355,9 +360,27 @@ const ProductDetailPage = () => {
             <div className="lg:col-span-5 flex flex-col">
               <h1 className="text-headline-xl font-space-grotesk font-black text-zinc-900 mb-2 leading-none">{product.name}</h1>
               <div className="flex items-center gap-4 mb-6">
-                <p className="text-headline-md font-bold text-primary-container">${product.price?.toFixed(2)}</p>
+                <p className="text-headline-md font-bold text-primary-container">${Number(product.price || 0).toFixed(2)}</p>
                 {product.oldPrice && (
-                  <p className="text-zinc-400 line-through font-bold">${product.oldPrice.toFixed(2)}</p>
+                  <p className="text-zinc-400 line-through font-bold">${Number(product.oldPrice).toFixed(2)}</p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-3 mb-6">
+                {product.brand && (
+                  <span className="px-3 py-1.5 rounded-full bg-zinc-100 text-zinc-700 text-[10px] font-black uppercase tracking-[0.2em]">
+                    {product.brand}
+                  </span>
+                )}
+                {product.categoryName && (
+                  <span className="px-3 py-1.5 rounded-full bg-primary-container/10 text-primary-container text-[10px] font-black uppercase tracking-[0.2em]">
+                    {product.categoryName}
+                  </span>
+                )}
+                {product.skuCode && (
+                  <span className="px-3 py-1.5 rounded-full bg-zinc-100 text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em]">
+                    {product.skuCode}
+                  </span>
                 )}
               </div>
 
@@ -394,10 +417,10 @@ const ProductDetailPage = () => {
                   {product.sizes?.map((s) => (
                     <button
                       key={s}
-                      onClick={() => setSelectedSize(`US ${s}`)}
-                      className={`py-3 rounded-xl border-2 font-bold transition-all ${selectedSize === `US ${s}` ? 'border-primary-container bg-primary-container/5 text-primary-container' : 'border-zinc-100 text-zinc-500 hover:border-zinc-200'}`}
+                      onClick={() => setSelectedSize(`US ${Number(s)}`)}
+                      className={`py-3 rounded-xl border-2 font-bold transition-all ${selectedSize === `US ${Number(s)}` ? 'border-primary-container bg-primary-container/5 text-primary-container' : 'border-zinc-100 text-zinc-500 hover:border-zinc-200'}`}
                     >
-                      US {s}
+                      US {Number(s)}
                     </button>
                   ))}
                   {(!product.sizes || product.sizes.length === 0) && <p className="text-zinc-400 text-xs italic">One Size Fits All</p>}
@@ -442,9 +465,27 @@ const ProductDetailPage = () => {
             <h2 className="text-label-sm font-black text-primary-container uppercase tracking-[0.3em] mb-12">Product DNA</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
-                { icon: 'weight', title: 'ULTRA-LIGHTWEIGHT', desc: 'At only 180g, the X1 is engineered to disappear on your feet, allowing for explosive speed without the drag.' },
-                { icon: 'texture', title: 'AERO-KNIT TECH', desc: 'Multi-layered knit construction ensures maximum airflow where you need it most during intense performance.' },
-                { icon: 'bolt', title: 'ENERGY RETURN', desc: 'Our proprietary foam tech recovers 94% of energy on every stride, propelling you forward with less effort.' }
+                {
+                  icon: 'texture',
+                  title: product.foamTech || 'FOAM TECH',
+                  desc: product.foamTech
+                    ? 'Foam technology information loaded from the database.'
+                    : 'No foam technology data available in the current record.'
+                },
+                {
+                  icon: 'shield',
+                  title: product.plateTech || 'PLATE TECH',
+                  desc: product.plateTech
+                    ? 'Plate technology information loaded from the database.'
+                    : 'No plate technology data available in the current record.'
+                },
+                {
+                  icon: 'bolt',
+                  title: product.upperTech || 'UPPER TECH',
+                  desc: product.upperTech
+                    ? 'Upper technology information loaded from the database.'
+                    : 'No upper technology data available in the current record.'
+                }
               ].map((item, i) => (
                 <div key={i} className="bg-white p-10 rounded-3xl ambient-shadow border border-zinc-50 text-center flex flex-col items-center group hover:translate-y-[-8px] transition-all">
                   <div className="w-16 h-16 bg-primary-container/5 rounded-2xl flex items-center justify-center text-primary-container mb-8 group-hover:bg-primary-container group-hover:text-white transition-all">
