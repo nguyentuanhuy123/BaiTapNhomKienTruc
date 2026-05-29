@@ -35,6 +35,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "allProducts", key = "'all'")
     public List<ProductResponse> findAll() {
         System.out.println("Querying DB ...");
@@ -46,26 +47,27 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "products_page", key = "#page + '-' + #size + '-' + #category + '-' + #brand + '-' + #color")
     public PaginatedResponse<ProductResponse> findAll(int page, int size, String category, String brand, String color) {
         log.info("Fetching products from DB - Page: {}, Size: {}, Category: {}", page, size, category);
         Pageable pageable = PageRequest.of(page, size);
-        
+
         Specification<Product> spec = (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
-            
+
             if (category != null && !category.isEmpty() && !category.equalsIgnoreCase("All")) {
                 predicates.add(criteriaBuilder.equal(root.get("category").get("name"), category));
             }
-            
+
             if (brand != null && !brand.isEmpty() && !brand.equalsIgnoreCase("All")) {
                 predicates.add(criteriaBuilder.equal(root.get("brand"), brand));
             }
-            
+
             if (color != null && !color.isEmpty() && !color.equalsIgnoreCase("All")) {
                 predicates.add(criteriaBuilder.isMember(color, root.get("colors")));
             }
-            
+
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
 
@@ -86,6 +88,7 @@ public class ProductServiceImpl implements ProductService {
 
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "flash_sale", key = "#page + '-' + #size")
     public PaginatedResponse<ProductResponse> findFlashSaleProducts(int page, int size) {
         log.info("Fetching flash sale products from DB - Page: {}", page);
@@ -106,6 +109,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Product findById(Long id) {
         return productRepository.findById(id).orElse(null);
     }
@@ -115,7 +119,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse save(ProductRequest productRequest) {
         Product product = new Product();
         updateProductFields(product, productRequest);
-        
+
         List<Image> images = productRequest.getImages()
                 .stream()
                 .map(img -> {
@@ -127,7 +131,7 @@ public class ProductServiceImpl implements ProductService {
                 })
                 .toList();
         product.setImages(images);
-        
+
         Product savedProduct = productRepository.save(product);
         log.info("Product save success.");
         return mapToProductResponse(savedProduct);
@@ -147,7 +151,7 @@ public class ProductServiceImpl implements ProductService {
         if (productRequest.getUpperTech() != null) product.setUpperTech(productRequest.getUpperTech());
         if (productRequest.getColors() != null) product.setColors(new ArrayList<>(productRequest.getColors()));
         if (productRequest.getSizes() != null) product.setSizes(new ArrayList<>(productRequest.getSizes()));
-        
+
         if (productRequest.getCategoryId() != null) {
             Category category = categoryRepository.findById(productRequest.getCategoryId())
                     .orElseThrow(() -> new RuntimeException("Category không tồn tại"));
@@ -156,18 +160,24 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    @Cacheable(value = "product_detail", key = "#id")
+    @Transactional(readOnly = true)
+    @Cacheable(
+            value = "product_detail",
+            key = "'product:' + #id"
+    )
     public ProductResponse getProductResponseById(Long id) {
         log.info("Fetching product detail from DB - ID: {}", id);
-        return mapToProductResponse(findById(id));
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product không tồn tại"));
+        return mapToProductResponse(product);
     }
 
     public ProductResponse mapToProductResponse(Product product) {
-        if (product == null) {
-            return null; // or throw a specific exception gracefully
-        }
-        List<ImageResponse> imageResponses = product.getImages()
-                .stream()
+        if (product == null) return null;
+
+        List<ImageResponse> imageResponses = product.getImages() == null
+                ? new ArrayList<>()
+                : product.getImages().stream()
                 .map(image -> new ImageResponse(image.getId(), image.getUrl()))
                 .toList();
 
@@ -184,9 +194,11 @@ public class ProductServiceImpl implements ProductService {
         response.setFoamTech(product.getFoamTech());
         response.setPlateTech(product.getPlateTech());
         response.setUpperTech(product.getUpperTech());
-        response.setColors(new ArrayList<>(product.getColors()));
-        response.setSizes(new ArrayList<>(product.getSizes()));
+        response.setColors(product.getColors() != null ? new ArrayList<>(product.getColors()) : new ArrayList<>());
+        response.setSizes(product.getSizes() != null ? new ArrayList<>(product.getSizes()) : new ArrayList<>());
+        response.setCategoryId(product.getCategory() != null ? product.getCategory().getId() : null);
         response.setCategoryName(product.getCategory() != null ? product.getCategory().getName() : null);
+        response.setImage(!imageResponses.isEmpty() ? imageResponses.get(0).getUrl() : null);
         response.setImageResponses(imageResponses);
         return response;
     }
@@ -206,7 +218,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse update(Long id, ProductRequest productRequest) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product không tồn tại"));
-        
+
         updateProductFields(product, productRequest);
 
         if (productRequest.getImages() != null) {
