@@ -1,6 +1,6 @@
 // src/api/paymentApi.js
 // Payment service chạy ở port 8086 (gọi thẳng, không qua gateway)
-const PAYMENT_BASE_URL = import.meta.env.VITE_PAYMENT_URL || 'http://localhost:8086';
+const PAYMENT_BASE_URL = import.meta.env.VITE_PAYMENT_URL || 'http://localhost:9000';
 
 const paymentApi = {
   /**
