@@ -36,7 +36,7 @@ const AdminDashboardPage = () => {
         .slice(0, 4)
         .map(order => ({
           id: order.orderNumber || `#${order.id}`,
-          customer: order.userResponse?.fullName || 'N/A',
+          customer: order.user?.fullName || order.userResponse?.fullName || 'N/A',
           date: order.createdAt ? getTimeAgo(new Date(order.createdAt)) : 'N/A',
           total: order.totalPrice || 0,
           status: order.orderStatus || 'Processing',

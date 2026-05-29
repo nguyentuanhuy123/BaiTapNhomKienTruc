@@ -91,15 +91,32 @@ public class FlashSaleCampaignService {
     }
 
     public void preWarmCampaign(FlashSaleCampaign campaign) {
+        if (campaign == null || campaign.getProducts() == null) {
+            return;
+        }
+        
         IMap<String, Integer> stockMap = hazelcastInstance.getMap("flashsale-stock");
         IMap<String, Object> campaignMap = hazelcastInstance.getMap("flashsale-campaign");
         IMap<String, String> priceMap = hazelcastInstance.getMap("flashsale-prices");
 
-        // Warm up each product stock in Hazelcast RAM
+        // Warm up each product stock in Hazelcast RAM & deduct from database
         for (FlashSaleProduct product : campaign.getProducts()) {
             // Only overwrite if not already present or if we want to force refresh
             stockMap.put(product.getProductId(), product.getStock());
             priceMap.put(product.getProductId(), product.getSalePrice().toString());
+
+            // Publish deduct event to database inventory-service
+            try {
+                java.util.Map<String, Object> deductEvent = java.util.Map.of(
+                    "productId", product.getProductId(),
+                    "deductQuantity", product.getStock(),
+                    "timestamp", System.currentTimeMillis()
+                );
+                redisTemplate.convertAndSend("inventory-deduct-channel", deductEvent);
+                System.out.println("🔥 [DEDUCT-EVENT] Published deduct request of " + product.getStock() + " units for product " + product.getProductId() + " to inventory-service.");
+            } catch (Exception e) {
+                System.err.println("Could not publish stock deduct event to Redis: " + e.getMessage());
+            }
         }
 
         // Store campaign duration / end time
@@ -111,11 +128,16 @@ public class FlashSaleCampaignService {
      * Reclaim leftover stock and clean up Hazelcast RAM when a campaign expires
      */
     public void endCampaignAndCleanUp(FlashSaleCampaign campaign) {
+        if (campaign == null || campaign.getProducts() == null) {
+            return;
+        }
+
         IMap<String, Integer> stockMap = hazelcastInstance.getMap("flashsale-stock");
         IMap<String, String> priceMap = hazelcastInstance.getMap("flashsale-prices");
         IMap<String, Object> campaignMap = hazelcastInstance.getMap("flashsale-campaign");
 
         for (FlashSaleProduct product : campaign.getProducts()) {
+
             String productId = product.getProductId();
             
             // 1. Fetch remaining stock from Hazelcast RAM

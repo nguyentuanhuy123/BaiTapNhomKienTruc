@@ -24,17 +24,17 @@ const AdminOrdersPage = () => {
       const transformedOrders = data.map(order => ({
         id: order.orderNumber || `#${order.id}`,
         orderId: order.id,
-        customer: order.userResponse?.fullName || 'N/A',
-        email: order.userResponse?.email || 'N/A',
+        customer: order.user?.fullName || order.userResponse?.fullName || 'N/A',
+        email: order.user?.email || order.userResponse?.email || 'N/A',
         date: order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' }) : 'N/A',
         total: order.totalPrice || 0,
         status: order.orderStatus || 'Pending',
         method: order.paymentMethod || 'N/A',
-        items: order.orderLineItemsDtoList?.map(item => ({
-          name: item.skuCode,
+        items: (order.orderLineItems || order.orderLineItemsDtoList)?.map(item => ({
+          name: item.productName || item.skuCode || 'N/A',
           image: item.imageUrl || 'https://via.placeholder.com/150',
-          qty: item.quantity,
-          price: item.price
+          qty: item.quantity || 0,
+          price: item.price || 0
         })) || []
       }));
       setOrders(transformedOrders);

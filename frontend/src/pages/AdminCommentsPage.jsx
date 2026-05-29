@@ -8,9 +8,21 @@ const AdminCommentsPage = () => {
   const { showAlert } = useAlert();
 
   useEffect(() => {
-    return commentService.subscribe(() => {
+    const unsubscribe = commentService.subscribe(() => {
       setReviews(commentService.getAllReviews());
     });
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'aero_tech_reviews') {
+        setReviews(commentService.getAllReviews());
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const handleReplySubmit = (reviewId, e) => {

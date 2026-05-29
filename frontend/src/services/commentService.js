@@ -1,6 +1,8 @@
 import { notificationService } from './notificationService';
 
-let reviews = [
+const LOCAL_STORAGE_KEY = 'aero_tech_reviews';
+
+const defaultReviews = [
   {
     id: 1,
     productId: 1,
@@ -29,6 +31,24 @@ let reviews = [
   }
 ];
 
+function loadReviews() {
+  try {
+    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : defaultReviews;
+  } catch (e) {
+    return defaultReviews;
+  }
+}
+
+function saveReviews(data) {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save reviews to localStorage', e);
+  }
+}
+
+let reviews = loadReviews();
 let listeners = [];
 
 export const commentService = {
@@ -44,14 +64,17 @@ export const commentService = {
   },
 
   getReviewsByProduct(productId) {
+    reviews = loadReviews();
     return reviews.filter(r => r.productId === parseInt(productId));
   },
 
   getAllReviews() {
+    reviews = loadReviews();
     return reviews;
   },
 
   addReview(productId, name, title, content, rating, image = "") {
+    reviews = loadReviews();
     const newRev = {
       id: Date.now(),
       productId: parseInt(productId),
@@ -65,6 +88,7 @@ export const commentService = {
       replies: []
     };
     reviews = [newRev, ...reviews];
+    saveReviews(reviews);
     this.notify();
 
     // Notify Admin of a new comment
@@ -76,6 +100,7 @@ export const commentService = {
   },
 
   addAdminReply(reviewId, replyContent) {
+    reviews = loadReviews();
     let reviewerName = '';
     let productName = '';
 
@@ -98,6 +123,7 @@ export const commentService = {
       return r;
     });
 
+    saveReviews(reviews);
     this.notify();
 
     // Trigger Notification to the user that admin replied to their comment

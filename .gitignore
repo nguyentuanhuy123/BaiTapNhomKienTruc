@@ -37,3 +37,13 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# Local Env Secrets
+.env
+
+# Logs and archives
+*.log
+*.zip
+node_modules/
+dist/
+.idea/
