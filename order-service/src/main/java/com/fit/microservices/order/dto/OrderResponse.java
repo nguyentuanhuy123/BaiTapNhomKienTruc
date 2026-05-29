@@ -20,6 +20,10 @@ public class OrderResponse {
     private List<OrderLineItemsDto> orderLineItems;
     private UserResponse user;
     private String orderStatus;
+    private BigDecimal totalPrice;
+    private LocalDateTime createdAt;
+    private String paymentMethod;
+    private String shippingMethod;
     
     public OrderResponse(Long id, String orderNumber, List<OrderLineItemsDto> orderLineItems, UserResponse user) {
         this.id = id;

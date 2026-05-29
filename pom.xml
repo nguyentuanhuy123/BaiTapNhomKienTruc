@@ -25,6 +25,7 @@
         <module>auth-service</module>
         <module>mcp-server</module>
         <module>flashsale-service</module>
+        <module>chatbot-service</module>
     </modules>
 
     <properties>

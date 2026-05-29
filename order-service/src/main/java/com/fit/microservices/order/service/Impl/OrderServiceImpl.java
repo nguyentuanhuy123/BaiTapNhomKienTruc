@@ -119,13 +119,31 @@ public class OrderServiceImpl implements OrderService {
                         item.getSkuCode(),
                         item.getColor(),
                         item.getSize(),
-                        item.getQuantity()
+                        item.getQuantity(),
+                        item.getPrice(),
+                        item.getProductName()
                 )).toList();
                 
-        OrderResponse response = new OrderResponse(order.getId(), order.getOrderNumber(), itemsDto, null);
+        UserResponse userResponse = safelyFetchUser(order.getUserId());
+        OrderResponse response = new OrderResponse(order.getId(), order.getOrderNumber(), itemsDto, userResponse);
         response.setOrderStatus(order.getOrderStatus().name());
+        response.setTotalPrice(order.getTotalPrice());
+        response.setCreatedAt(order.getCreatedAt());
+        response.setPaymentMethod(order.getPaymentMethod());
+        response.setShippingMethod(order.getShippingMethod());
         return response;
     }
+    
+    private UserResponse safelyFetchUser(Long userId) {
+        if (userId == null) return null;
+        try {
+            return userClient.getUserById(userId);
+        } catch (Exception e) {
+            System.err.println("Error calling userClient.getUserById for userId: " + userId + ". Error: " + e.getMessage());
+            return null;
+        }
+    }
+    
     private OrderLineItem mapToDto(OrderLineItemsDto orderLineItemDto) {
         OrderLineItem orderLineItem = new OrderLineItem();
         orderLineItem.setProductId(orderLineItemDto.getProductId());
@@ -149,12 +167,17 @@ public class OrderServiceImpl implements OrderService {
                     itemDto.setColor(item.getColor());
                     itemDto.setSize(item.getSize());
                     itemDto.setQuantity(item.getQuantity());
+                    itemDto.setPrice(item.getPrice());
+                    itemDto.setProductName(item.getProductName());
                     return itemDto;
                 }).toList();
-//        UserResponse userResponse = userClient.getUserById(order.getUserId());
-        UserResponse userResponse = null;
+        UserResponse userResponse = safelyFetchUser(order.getUserId());
         OrderResponse response = new OrderResponse(order.getId(), order.getOrderNumber(), items, userResponse);
         response.setOrderStatus(order.getOrderStatus().name());
+        response.setTotalPrice(order.getTotalPrice());
+        response.setCreatedAt(order.getCreatedAt());
+        response.setPaymentMethod(order.getPaymentMethod());
+        response.setShippingMethod(order.getShippingMethod());
         return response;
     }
 
@@ -172,11 +195,17 @@ public class OrderServiceImpl implements OrderService {
                                 itemDto.setColor(item.getColor());
                                 itemDto.setSize(item.getSize());
                                 itemDto.setQuantity(item.getQuantity());
+                                itemDto.setPrice(item.getPrice());
+                                itemDto.setProductName(item.getProductName());
                                 return itemDto;
                             }).toList();
-                    UserResponse userResponse = null;
+                    UserResponse userResponse = safelyFetchUser(order.getUserId());
                     OrderResponse response = new OrderResponse(order.getId(), order.getOrderNumber(), items, userResponse);
                     response.setOrderStatus(order.getOrderStatus().name());
+                    response.setTotalPrice(order.getTotalPrice());
+                    response.setCreatedAt(order.getCreatedAt());
+                    response.setPaymentMethod(order.getPaymentMethod());
+                    response.setShippingMethod(order.getShippingMethod());
                     return response;
                 })
                 .toList();

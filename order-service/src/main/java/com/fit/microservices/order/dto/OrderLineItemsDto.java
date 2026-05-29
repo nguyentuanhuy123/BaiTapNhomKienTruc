@@ -16,4 +16,6 @@ public class OrderLineItemsDto {
     private String color;
     private String size;
     private Integer quantity;
+    private BigDecimal price;
+    private String productName;
 }

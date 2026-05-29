@@ -58,6 +58,23 @@ public class OrderController {
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
         return new ResponseEntity<>(orderService.getAllOrders(), HttpStatus.OK);
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update order status")
+    @PutMapping("/{orderId}/status")
+    public ResponseEntity<String> updateOrderStatus(@PathVariable Long orderId, @RequestBody java.util.Map<String, String> request) {
+        String statusStr = request.get("status");
+        if (statusStr == null) {
+            return new ResponseEntity<>("Status is required", HttpStatus.BAD_REQUEST);
+        }
+        try {
+            com.fit.microservices.order.model.OrderStatus status = com.fit.microservices.order.model.OrderStatus.valueOf(statusStr.toUpperCase());
+            orderService.updateOrderStatus(orderId, status);
+            return new ResponseEntity<>("Order status updated successfully", HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>("Invalid status value", HttpStatus.BAD_REQUEST);
+        }
+    }
     @PreAuthorize("hasRole('USER')")
     @Operation(summary = "Check if user has purchased product")
     @GetMapping("/has-purchased")

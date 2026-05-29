@@ -30,6 +30,7 @@ import NotFoundPage from './pages/NotFoundPage';
 
 import ScrollToTop from './components/common/ScrollToTop';
 import BackToTop from './components/common/BackToTop';
+import ChatbotWidget from './components/common/ChatbotWidget';
 
 import { AlertProvider } from './contexts/AlertContext';
 import { AuthProvider } from './contexts/AuthContext';
@@ -44,6 +45,7 @@ function App() {
             <div className="w-full">
               <ScrollToTop />
               <BackToTop />
+              <ChatbotWidget />
               <Routes>
                 <Route path="/"                  element={<LandingPage />} />
                 <Route path="/explore"           element={<ExplorePage />} />
