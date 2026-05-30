@@ -661,10 +661,10 @@ const ProfilePage = () => {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarInputRef = useRef(null);
 
-  const recentOrders = [
-    { id: '#VL-90821', product: 'VELOCITY AIR MAX X1', date: 'May 12, 2024', total: 220.0, status: 'DELIVERED', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDlNG2P_20pGAAH4lD1LeB5XUPjnnrFc1Iqelb0yK_m5pU8LBE-r1o2Qc0s98A3ibTFLgTBWkOL_Of5_oOH0uULbeky0x39_KUNX_WWNODTJMDKHAAG_xht_x1U0gWH71RRXbW_ZtO1ozzj1yI-3cDWy7ha4kOLfSxqzcFYN7BgdKbZ3lfnDHt2k0E7f0EimKNABOUGiiHM7MyaiARflxSGkXj5a0rOM8LI-ylmoHgcPxKHEJvRV5XyWWxtRcZzNNk7Ff5qopsRjeM' },
-    { id: '#VL-88219', product: 'CLOUD RACER 2.0', date: 'May 08, 2024', total: 185.0, status: 'IN TRANSIT', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAz8dC1bhFHEAQ2mtNFLQZxqJmpjz1uJPQ9tyYXoNc7rwV15o7-D75288YdtAAKKdypNXvg0TQPkXwx4KrxVYtGLy1Y8QFAJn59CzNJ5ZIWzxeEPSWLJfwOaVcrAYiFm2wa2WCcg3BqmSlLGKsurmYPaiVyBpPBX8RxDPfdD_cljsNm3rmYifWKbkTaYmRTu4dlqrzVuyXY6Dwy_rNMSZ7ANnXgxhHwSNqWEo--SpdWOepwnSFNzUCcqqtmsZdRJbbjCUv5yW_MigY' },
-  ];
+  // const recentOrders = [
+  //   { id: '#VL-90821', product: 'VELOCITY AIR MAX X1', date: 'May 12, 2024', total: 220.0, status: 'DELIVERED', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDlNG2P_20pGAAH4lD1LeB5XUPjnnrFc1Iqelb0yK_m5pU8LBE-r1o2Qc0s98A3ibTFLgTBWkOL_Of5_oOH0uULbeky0x39_KUNX_WWNODTJMDKHAAG_xht_x1U0gWH71RRXbW_ZtO1ozzj1yI-3cDWy7ha4kOLfSxqzcFYN7BgdKbZ3lfnDHt2k0E7f0EimKNABOUGiiHM7MyaiARflxSGkXj5a0rOM8LI-ylmoHgcPxKHEJvRV5XyWWxtRcZzNNk7Ff5qopsRjeM' },
+  //   { id: '#VL-88219', product: 'CLOUD RACER 2.0', date: 'May 08, 2024', total: 185.0, status: 'IN TRANSIT', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAz8dC1bhFHEAQ2mtNFLQZxqJmpjz1uJPQ9tyYXoNc7rwV15o7-D75288YdtAAKKdypNXvg0TQPkXwx4KrxVYtGLy1Y8QFAJn59CzNJ5ZIWzxeEPSWLJfwOaVcrAYiFm2wa2WCcg3BqmSlLGKsurmYPaiVyBpPBX8RxDPfdD_cljsNm3rmYifWKbkTaYmRTu4dlqrzVuyXY6Dwy_rNMSZ7ANnXgxhHwSNqWEo--SpdWOepwnSFNzUCcqqtmsZdRJbbjCUv5yW_MigY' },
+  // ];
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -856,47 +856,47 @@ const ProfilePage = () => {
         </div>
 
         {/* Recent Orders */}
-        <section className="bg-white rounded-[40px] p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-          <div className="flex justify-between items-center mb-10">
-            <h2 className="text-2xl font-bold text-zinc-900 uppercase tracking-tight">Recent Orders</h2>
-            <Link to="/orders" className="text-primary-container font-black text-xs uppercase tracking-widest hover:text-zinc-900 transition-colors">View All Orders</Link>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left border-b border-zinc-100">
-                  <th className="pb-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Product</th>
-                  <th className="pb-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Order ID</th>
-                  <th className="pb-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Date</th>
-                  <th className="pb-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Total</th>
-                  <th className="pb-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentOrders.map((order, idx) => (
-                  <tr key={idx} className="border-b border-zinc-50 last:border-0 group cursor-pointer">
-                    <td className="py-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-zinc-50 rounded-xl p-1 flex items-center justify-center">
-                          <img src={order.image} alt={order.product} className="w-full h-full object-contain" />
-                        </div>
-                        <span className="font-bold text-sm text-zinc-900 group-hover:text-primary-container transition-colors">{order.product}</span>
-                      </div>
-                    </td>
-                    <td className="py-6"><span className="text-sm font-bold text-zinc-400">{order.id}</span></td>
-                    <td className="py-6 text-center"><span className="text-sm font-bold text-zinc-900">{order.date}</span></td>
-                    <td className="py-6 text-center"><span className="text-sm font-black text-zinc-900 italic">${order.total.toFixed(2)}</span></td>
-                    <td className="py-6 text-right">
-                      <span className={`inline-block px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest ${order.status === 'DELIVERED' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
-                        {order.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        {/*<section className="bg-white rounded-[40px] p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">*/}
+        {/*  <div className="flex justify-between items-center mb-10">*/}
+        {/*    <h2 className="text-2xl font-bold text-zinc-900 uppercase tracking-tight">Recent Orders</h2>*/}
+        {/*    <Link to="/orders" className="text-primary-container font-black text-xs uppercase tracking-widest hover:text-zinc-900 transition-colors">View All Orders</Link>*/}
+        {/*  </div>*/}
+        {/*  <div className="overflow-x-auto">*/}
+        {/*    <table className="w-full">*/}
+        {/*      <thead>*/}
+        {/*        <tr className="text-left border-b border-zinc-100">*/}
+        {/*          <th className="pb-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Product</th>*/}
+        {/*          <th className="pb-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Order ID</th>*/}
+        {/*          <th className="pb-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Date</th>*/}
+        {/*          <th className="pb-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Total</th>*/}
+        {/*          <th className="pb-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Status</th>*/}
+        {/*        </tr>*/}
+        {/*      </thead>*/}
+        {/*      /!*<tbody>*!/*/}
+        {/*      /!*  {recentOrders.map((order, idx) => (*!/*/}
+        {/*      /!*    <tr key={idx} className="border-b border-zinc-50 last:border-0 group cursor-pointer">*!/*/}
+        {/*      /!*      <td className="py-6">*!/*/}
+        {/*      /!*        <div className="flex items-center gap-4">*!/*/}
+        {/*      /!*          <div className="w-12 h-12 bg-zinc-50 rounded-xl p-1 flex items-center justify-center">*!/*/}
+        {/*      /!*            <img src={order.image} alt={order.product} className="w-full h-full object-contain" />*!/*/}
+        {/*      /!*          </div>*!/*/}
+        {/*      /!*          <span className="font-bold text-sm text-zinc-900 group-hover:text-primary-container transition-colors">{order.product}</span>*!/*/}
+        {/*      /!*        </div>*!/*/}
+        {/*      /!*      </td>*!/*/}
+        {/*      /!*      <td className="py-6"><span className="text-sm font-bold text-zinc-400">{order.id}</span></td>*!/*/}
+        {/*      /!*      <td className="py-6 text-center"><span className="text-sm font-bold text-zinc-900">{order.date}</span></td>*!/*/}
+        {/*      /!*      <td className="py-6 text-center"><span className="text-sm font-black text-zinc-900 italic">${order.total.toFixed(2)}</span></td>*!/*/}
+        {/*      /!*      <td className="py-6 text-right">*!/*/}
+        {/*      /!*        <span className={`inline-block px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest ${order.status === 'DELIVERED' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>*!/*/}
+        {/*      /!*          {order.status}*!/*/}
+        {/*      /!*        </span>*!/*/}
+        {/*      /!*      </td>*!/*/}
+        {/*      /!*    </tr>*!/*/}
+        {/*      /!*  ))}*!/*/}
+        {/*      /!*</tbody>*!/*/}
+        {/*    </table>*/}
+        {/*  </div>*/}
+        {/*</section>*/}
       </main>
 
       <Footer />

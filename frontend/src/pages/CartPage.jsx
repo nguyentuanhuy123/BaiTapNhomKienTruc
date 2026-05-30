@@ -35,8 +35,8 @@ const CartPage = () => {
   const hasLocalCart = !!localCart?.items?.length;
 
   const cartItems = useMemo(() => {
-    if (localCart?.items?.length) {
-      return localCart.items.map((it) => ({
+    if (localCart) {
+      return (localCart.items || []).map((it) => ({
         id: it.id,
         backendItemId: it.backendItemId ?? null,
         name: it.name || it.skuCode,
@@ -123,10 +123,14 @@ const CartPage = () => {
 
       if (current.backendItemId != null) {
         try {
-          await cartService.updateQuantity({
-            itemId: current.backendItemId,
-            quantity: nextQty,
-          });
+          if (nextQty <= 0) {
+            await cartService.removeItem({ itemId: current.backendItemId });
+          } else {
+            await cartService.updateQuantity({
+              itemId: current.backendItemId,
+              quantity: nextQty,
+            });
+          }
         } catch (e) {
           console.error(e);
           setError(isAuthError(e) ? authErrorMessage : "Failed to update quantity.");
@@ -140,10 +144,18 @@ const CartPage = () => {
         items[index] = { ...current, quantity: nextQty };
       }
 
-      nextCart.items = items;
-      nextCart.updatedAt = new Date().toISOString();
-      writeLocalCart(nextCart);
-      setLocalCart(nextCart);
+      if (items.length === 0) {
+        localStorage.removeItem("cart");
+        setLocalCart(null);
+        setCartResponse(null);
+        window.dispatchEvent(new Event("cartUpdated"));
+      } else {
+        nextCart.items = items;
+        nextCart.updatedAt = new Date().toISOString();
+        writeLocalCart(nextCart);
+        setLocalCart(nextCart);
+        window.dispatchEvent(new Event("cartUpdated"));
+      }
       return;
     }
 
@@ -155,12 +167,18 @@ const CartPage = () => {
 
     try {
       setError("");
-      // Backend: quantity <= 0 sẽ tự xoá item (theo logic bạn)
-      const updated = await cartService.updateQuantity({
-        itemId,
-        quantity: nextQty,
-      });
-      setCartResponse(updated);
+      if (nextQty <= 0) {
+        const updated = await cartService.removeItem({ itemId });
+        setCartResponse(updated);
+        window.dispatchEvent(new Event("cartUpdated"));
+      } else {
+        const updated = await cartService.updateQuantity({
+          itemId,
+          quantity: nextQty,
+        });
+        setCartResponse(updated);
+        window.dispatchEvent(new Event("cartUpdated"));
+      }
     } catch (e) {
       console.error(e);
       setError(isAuthError(e) ? authErrorMessage : "Failed to update quantity.");
@@ -188,10 +206,18 @@ const CartPage = () => {
       }
 
       items.splice(index, 1);
-      nextCart.items = items;
-      nextCart.updatedAt = new Date().toISOString();
-      writeLocalCart(nextCart);
-      setLocalCart(nextCart);
+      if (items.length === 0) {
+        localStorage.removeItem("cart");
+        setLocalCart(null);
+        setCartResponse(null);
+        window.dispatchEvent(new Event("cartUpdated"));
+      } else {
+        nextCart.items = items;
+        nextCart.updatedAt = new Date().toISOString();
+        writeLocalCart(nextCart);
+        setLocalCart(nextCart);
+        window.dispatchEvent(new Event("cartUpdated"));
+      }
       return;
     }
 
@@ -199,6 +225,7 @@ const CartPage = () => {
       setError("");
       const updated = await cartService.removeItem({ itemId });
       setCartResponse(updated);
+      window.dispatchEvent(new Event("cartUpdated"));
     } catch (e) {
       console.error(e);
       setError(isAuthError(e) ? authErrorMessage : "Failed to remove item.");

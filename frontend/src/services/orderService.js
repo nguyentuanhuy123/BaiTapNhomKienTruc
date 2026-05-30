@@ -19,5 +19,15 @@ export const orderService = {
       console.error('Lỗi khi lấy thông tin đơn hàng:', error);
       throw error;
     }
+  },
+
+  getMyOrders: async () => {
+    try {
+      const response = await axiosClient.get(`/api/order/my-orders`);
+      return response.data; 
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách đơn hàng của tôi:', error);
+      throw error;
+    }
   }
 };

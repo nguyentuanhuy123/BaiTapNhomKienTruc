@@ -59,6 +59,16 @@ public class OrderController {
         return new ResponseEntity<>(orderService.getAllOrders(), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Get my orders")
+    @GetMapping("/my-orders")
+    public ResponseEntity<List<OrderResponse>> getMyOrders() {
+        Long userId = (Long) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+        return new ResponseEntity<>(orderService.getMyOrders(userId), HttpStatus.OK);
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update order status")
     @PutMapping("/{orderId}/status")

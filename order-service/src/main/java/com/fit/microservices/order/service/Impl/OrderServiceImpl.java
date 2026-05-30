@@ -210,6 +210,36 @@ public class OrderServiceImpl implements OrderService {
                 })
                 .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getMyOrders(Long userId) {
+        return orderRepository.findByUserId(userId).stream()
+                .map(order -> {
+                    List<OrderLineItemsDto> items = order.getOrderLineItemsList()
+                            .stream()
+                            .map(item -> {
+                                OrderLineItemsDto itemDto = new OrderLineItemsDto();
+                                itemDto.setProductId(item.getProductId());
+                                itemDto.setSkuCode(item.getSkuCode());
+                                itemDto.setColor(item.getColor());
+                                itemDto.setSize(item.getSize());
+                                itemDto.setQuantity(item.getQuantity());
+                                itemDto.setPrice(item.getPrice());
+                                itemDto.setProductName(item.getProductName());
+                                return itemDto;
+                            }).toList();
+                    UserResponse userResponse = safelyFetchUser(order.getUserId());
+                    OrderResponse response = new OrderResponse(order.getId(), order.getOrderNumber(), items, userResponse);
+                    response.setOrderStatus(order.getOrderStatus().name());
+                    response.setTotalPrice(order.getTotalPrice());
+                    response.setCreatedAt(order.getCreatedAt());
+                    response.setPaymentMethod(order.getPaymentMethod());
+                    response.setShippingMethod(order.getShippingMethod());
+                    return response;
+                }).toList();
+    }
+
     private List<OrderCancelEvent.OrderItem> mapOrderItems(Order order) {
         return order.getOrderLineItemsList().stream()
                 .map(item -> new OrderCancelEvent.OrderItem(
