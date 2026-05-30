@@ -115,8 +115,8 @@ export const UserStatusProvider = ({ children }) => {
       }
     });
 
-    // stompClient.activate();
-    // clientRef.current = stompClient;
+    stompClient.activate();
+    clientRef.current = stompClient;
 
     return () => {
       if (clientRef.current) {

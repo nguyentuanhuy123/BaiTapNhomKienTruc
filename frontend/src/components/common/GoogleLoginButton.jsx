@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
  * GoogleLoginButton — dùng Google Identity Services (GSI) script tag.
  * Không cần cài thêm npm package nào.
  *
- * Cần thêm VITE_GOOGLE_CLIENT_ID vào .env:
+ * Cần thêm VITE_GOOGLE_CLIENT_ID vào ..env:
  *   VITE_GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
  *
  * @param {Function} onSuccess - Nhận idToken (string) khi đăng nhập thành công
@@ -17,7 +17,7 @@ const GoogleLoginButton = ({ onSuccess, onError, text = 'signin_with' }) => {
 
     useEffect(() => {
         if (!clientId) {
-            console.warn('[Google] Thiếu VITE_GOOGLE_CLIENT_ID trong .env');
+            console.warn('[Google] Thiếu VITE_GOOGLE_CLIENT_ID trong ..env');
             return;
         }
 

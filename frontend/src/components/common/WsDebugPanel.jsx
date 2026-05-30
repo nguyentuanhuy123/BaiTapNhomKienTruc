@@ -9,7 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
  * Cho phép kiểm tra kết nối WebSocket và statusMap hiện tại.
  *
  * Thêm vào cuối App.jsx (chỉ dev):
- *   {import.meta.env.DEV && <WsDebugPanel />}
+ *   {import.meta..env.DEV && <WsDebugPanel />}
  */
 const WsDebugPanel = () => {
   const { statusMap, connected } = useUserStatusContext();
