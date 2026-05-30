@@ -21,6 +21,16 @@ export const orderService = {
     }
   },
 
+  getMyOrders: async () => {
+    try {
+      const response = await axiosClient.get(`/api/order/my-orders`);
+      return response.data; 
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách đơn hàng của tôi:', error);
+      throw error;
+    }
+  },
+
   updatePaymentMethod: async (orderId, paymentMethod) => {
     try {
       const response = await axiosClient.put(`/api/order/${orderId}/payment-method`, { paymentMethod });

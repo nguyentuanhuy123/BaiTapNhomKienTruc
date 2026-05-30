@@ -20,6 +20,14 @@ const PaymentReturnPage = () => {
 
   const isSuccess = status === 'success';
 
+  // Clear giỏ hàng ở frontend nếu thanh toán thành công
+  useEffect(() => {
+    if (isSuccess) {
+      localStorage.removeItem('cart');
+      window.dispatchEvent(new Event('cartUpdated'));
+    }
+  }, [isSuccess]);
+
   // Auto-redirect về trang chủ sau 10s khi thành công
   useEffect(() => {
     if (!isSuccess) return;

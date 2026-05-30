@@ -14,5 +14,6 @@ public interface OrderService {
     void updateOrderStatus(Long orderId, OrderStatus status, String paymentMethod);
     void updatePaymentMethod(Long orderId, String paymentMethod);
     List<OrderResponse> getAllOrders();
+    List<OrderResponse> getMyOrders(Long userId);
     boolean hasPurchasedProduct(Long userId, String skuCode);
 }
