@@ -224,7 +224,7 @@ const AdminDashboardPage = () => {
                     <td className="py-4 font-black font-space-grotesk italic text-zinc-950">${order.total.toFixed(2)}</td>
                     <td className="py-4 text-center">
                       <span className={`px-3 py-1 rounded-full text-[9px] font-black tracking-widest ${
-                        order.status === 'Delivered' ? 'bg-green-50 text-green-600 border border-green-100' :
+                        order.status === 'Delivered' || order.status === 'Completed' || order.status === 'COMPLETED' ? 'bg-green-50 text-green-600 border border-green-100' :
                         order.status === 'Processing' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
                         order.status === 'In Transit' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
                         'bg-red-50 text-red-600 border border-red-100'

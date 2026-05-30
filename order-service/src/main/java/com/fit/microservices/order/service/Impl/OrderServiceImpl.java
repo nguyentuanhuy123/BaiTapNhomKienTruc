@@ -291,6 +291,25 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public void updateOrderStatus(Long orderId, OrderStatus status, String paymentMethod) {
+        orderRepository.findById(orderId).ifPresent(order -> {
+            if (paymentMethod != null && !paymentMethod.isEmpty()) {
+                order.setPaymentMethod(paymentMethod);
+            }
+            orderRepository.save(order);
+        });
+        updateOrderStatus(orderId, status);
+    }
+
+    @Override
+    public void updatePaymentMethod(Long orderId, String paymentMethod) {
+        orderRepository.findById(orderId).ifPresent(order -> {
+            order.setPaymentMethod(paymentMethod);
+            orderRepository.save(order);
+        });
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public boolean hasPurchasedProduct(Long userId, String skuCode) {
         List<Order> orders = orderRepository.findByUserId(userId);

@@ -611,6 +611,10 @@ const CheckoutPage = () => {
                   if (step === 1) {
                     handleContinueToPayment();
                   } else if (step === 2) {
+                    if (currentOrderId && paymentMethod) {
+                      orderService.updatePaymentMethod(currentOrderId, paymentMethod.toUpperCase())
+                        .catch(err => console.error('Failed to save payment method:', err));
+                    }
                     setStep(3);
                   } else {
                     handlePlaceOrder();

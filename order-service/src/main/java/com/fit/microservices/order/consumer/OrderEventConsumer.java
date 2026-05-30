@@ -36,8 +36,8 @@ public class OrderEventConsumer {
     @KafkaListener(topics = "payment_completed", groupId = "order-group", containerFactory = "paymentCompletedKafkaListenerContainerFactory")
     public void handlePaymentCompleted(PaymentCompletedEvent paymentCompletedEvent) {
         System.out.println("Nhận PaymentCompletedEvent cho order: "+paymentCompletedEvent.getOrderId());
-        orderService.updateOrderStatus(paymentCompletedEvent.getOrderId(), OrderStatus.COMPLETED);
-        
+        orderService.updateOrderStatus(paymentCompletedEvent.getOrderId(), OrderStatus.COMPLETED, paymentCompletedEvent.getPaymentMethod());
+
         orderRepository.findById(paymentCompletedEvent.getOrderId()).ifPresent(order -> {
             Long userId = order.getUserId();
             if (userId != null) {
