@@ -3,36 +3,41 @@ import { commentService } from '../services/commentService';
 import { useAlert } from '../contexts/AlertContext';
 
 const AdminCommentsPage = () => {
-  const [reviews, setReviews] = useState(commentService.getAllReviews());
+  const [reviews, setReviews] = useState([]);
   const [replyText, setReplyText] = useState({});
   const { showAlert } = useAlert();
 
-  useEffect(() => {
-    const unsubscribe = commentService.subscribe(() => {
-      setReviews(commentService.getAllReviews());
-    });
+  const loadReviews = async () => {
+    const data = await commentService.getAllReviews();
+    setReviews(data);
+  };
 
-    const handleStorageChange = (e) => {
-      if (e.key === 'aero_tech_reviews') {
-        setReviews(commentService.getAllReviews());
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
+  useEffect(() => {
+    loadReviews();
+    
+    const unsubscribe = commentService.subscribe(() => {
+      loadReviews();
+    });
 
     return () => {
       unsubscribe();
-      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
-  const handleReplySubmit = (reviewId, e) => {
+  const handleReplySubmit = async (reviewId, e) => {
     e.preventDefault();
     const content = replyText[reviewId];
     if (!content || !content.trim()) return;
 
-    commentService.addAdminReply(reviewId, content);
-    setReplyText(prev => ({ ...prev, [reviewId]: '' }));
-    showAlert('Đã gửi phản hồi bình luận thành công!', 'success');
+    try {
+      await commentService.addAdminReply(reviewId, content);
+      setReplyText(prev => ({ ...prev, [reviewId]: '' }));
+      showAlert('Đã gửi phản hồi bình luận thành công!', 'success');
+      loadReviews();
+    } catch (error) {
+      console.error(error);
+      showAlert('Không thể phản hồi bình luận!', 'error');
+    }
   };
 
   const handleTextChange = (reviewId, value) => {
@@ -64,7 +69,7 @@ const AdminCommentsPage = () => {
                 <span className="text-[9px] font-black text-primary-container uppercase tracking-widest bg-primary-container/5 px-2.5 py-1 rounded-md">
                   Product ID: {rev.productId}
                 </span>
-                <h3 className="text-lg font-black text-zinc-900 mt-3 font-space-grotesk">{rev.title}</h3>
+                {rev.title && <h3 className="text-lg font-black text-zinc-900 mt-3 font-space-grotesk">{rev.title}</h3>}
                 <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider mt-1">
                   Đăng bởi {rev.name} • {rev.date}
                 </p>

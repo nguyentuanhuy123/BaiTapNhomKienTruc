@@ -75,6 +75,19 @@ public class OrderController {
             return new ResponseEntity<>("Invalid status value", HttpStatus.BAD_REQUEST);
         }
     }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @Operation(summary = "Update order payment method")
+    @PutMapping("/{orderId}/payment-method")
+    public ResponseEntity<String> updatePaymentMethod(@PathVariable Long orderId, @RequestBody java.util.Map<String, String> request) {
+        String paymentMethod = request.get("paymentMethod");
+        if (paymentMethod == null) {
+            return new ResponseEntity<>("Payment method is required", HttpStatus.BAD_REQUEST);
+        }
+        orderService.updatePaymentMethod(orderId, paymentMethod);
+        return new ResponseEntity<>("Order payment method updated successfully", HttpStatus.OK);
+    }
+
     @PreAuthorize("hasRole('USER')")
     @Operation(summary = "Check if user has purchased product")
     @GetMapping("/has-purchased")

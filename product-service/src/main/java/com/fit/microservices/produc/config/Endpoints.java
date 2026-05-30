@@ -6,6 +6,7 @@ public class Endpoints {
             "/api/product/**",
             "/api/category/**",
             "/api/wishlist/**",
+            "/api/comment/product/**",
             "/error"
     };
     public static final String[] PUBLIC_POST_ENDPOINTS = {
@@ -20,10 +21,12 @@ public class Endpoints {
     //ADMIN
     public static final String[] ADMIN_GET_ENDPOINTS = {
             "/api/images/**",
+            "/api/comment",
     };
     public static final String[] ADMIN_POST_ENDPOINTS = {
             "/api/product/**",
-            "/api/category/**"
+            "/api/category/**",
+            "/api/comment/*/reply"
     };
     public static final String[] ADMIN_DELETE_ENDPOINTS = {
             "/api/product/**",
