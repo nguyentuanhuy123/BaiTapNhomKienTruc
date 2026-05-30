@@ -1,20 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { adminService } from '../services/adminService';
+import { productService } from '../services/productService';
 import { useAlert } from '../contexts/AlertContext';
+
+const PLACEHOLDER_IMAGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png";
 
 const AdminOrdersPage = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [productImages, setProductImages] = useState({});
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const { showAlert } = useAlert();
 
-  const tabs = ['All', 'Pending', 'Processing', 'In Transit', 'Delivered', 'Cancelled'];
+  const tabs = ['All', 'Pending', 'Processing', 'In Transit', 'Completed', 'Cancelled'];
 
   useEffect(() => {
     fetchOrders();
+    fetchProductImages();
   }, []);
+
+  const fetchProductImages = async () => {
+    try {
+      const prodData = await productService.getAllProducts(0, 100);
+      const content = prodData?.content || prodData || [];
+      const imageMap = {};
+      content.forEach(p => {
+        if (p.id && p.imageResponses?.[0]?.url) {
+          imageMap[p.id] = p.imageResponses[0].url;
+        } else if (p.id && p.images?.[0]?.url) {
+          imageMap[p.id] = p.images[0].url;
+        }
+      });
+      setProductImages(imageMap);
+    } catch (err) {
+      console.error('Error fetching product images:', err);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -31,13 +56,15 @@ const AdminOrdersPage = () => {
         status: order.orderStatus || 'Pending',
         method: order.paymentMethod || 'N/A',
         items: (order.orderLineItems || order.orderLineItemsDtoList)?.map(item => ({
+          productId: item.productId,
           name: item.productName || item.skuCode || 'N/A',
-          image: item.imageUrl || 'https://via.placeholder.com/150',
+          image: item.imageUrl || PLACEHOLDER_IMAGE,
           qty: item.quantity || 0,
           price: item.price || 0
         })) || []
       }));
       setOrders(transformedOrders);
+      setCurrentPage(1);
     } catch (error) {
       console.error('Error fetching orders:', error);
       showAlert('Không thể tải danh sách đơn hàng!', 'error');
@@ -67,6 +94,9 @@ const AdminOrdersPage = () => {
                           order.email.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
+
+  const totalPages = Math.ceil(filteredOrders.length / pageSize);
+  const paginatedOrders = filteredOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   if (loading) {
     return (
@@ -100,7 +130,10 @@ const AdminOrdersPage = () => {
           {tabs.map(tab => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+                setActiveTab(tab);
+                setCurrentPage(1);
+              }}
               className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                 activeTab === tab
                   ? 'bg-primary-container text-white shadow-md'
@@ -117,7 +150,10 @@ const AdminOrdersPage = () => {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Tìm theo Mã đơn, Tên..."
             className="w-full text-xs text-zinc-800 outline-none bg-transparent font-bold"
           />
@@ -138,7 +174,7 @@ const AdminOrdersPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50">
-              {filteredOrders.map((order) => (
+              {paginatedOrders.map((order) => (
                 <tr key={order.id} className="group hover:bg-zinc-50/50 transition-colors">
                   <td className="py-5 font-bold text-zinc-900">
                     <p>{order.id}</p>
@@ -151,7 +187,7 @@ const AdminOrdersPage = () => {
                   <td className="py-5 font-black font-space-grotesk italic text-zinc-950">${order.total.toFixed(2)}</td>
                   <td className="py-5">
                     <span className={`px-3 py-1 rounded-md text-[9px] font-black tracking-widest ${
-                      order.status === 'Delivered' ? 'bg-green-50 text-green-600 border border-green-100' :
+                      order.status === 'Delivered' || order.status === 'Completed' || order.status === 'COMPLETED' ? 'bg-green-50 text-green-600 border border-green-100' :
                       order.status === 'Pending' ? 'bg-zinc-100 text-zinc-500 border border-zinc-200' :
                       order.status === 'Processing' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
                       order.status === 'In Transit' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
@@ -175,7 +211,7 @@ const AdminOrdersPage = () => {
                       <option value="PENDING">Pending</option>
                       <option value="PROCESSING">Processing</option>
                       <option value="IN_TRANSIT">In Transit</option>
-                      <option value="DELIVERED">Delivered</option>
+                      <option value="COMPLETED">Completed</option>
                       <option value="CANCELLED">Cancelled</option>
                     </select>
                   </td>
@@ -184,6 +220,49 @@ const AdminOrdersPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Dynamic Pagination Controls (10 items per page) */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-zinc-100">
+            <span className="text-xs text-zinc-400 font-bold uppercase tracking-widest">
+              Hiển thị {Math.min(filteredOrders.length, (currentPage - 1) * pageSize + 1)}-{Math.min(filteredOrders.length, currentPage * pageSize)} của {filteredOrders.length} đơn hàng
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="w-10 h-10 rounded-xl border border-zinc-100 bg-white hover:bg-zinc-50 disabled:opacity-40 transition-all flex items-center justify-center text-zinc-600"
+              >
+                <span className="material-symbols-outlined text-sm">chevron_left</span>
+              </button>
+              
+              {Array.from({ length: totalPages || 1 }).map((_, idx) => {
+                const pageNum = idx + 1;
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`w-10 h-10 rounded-xl text-xs font-black transition-all ${
+                      currentPage === pageNum
+                        ? 'bg-primary-container text-white shadow-lg'
+                        : 'border border-zinc-100 bg-white hover:bg-zinc-50 text-zinc-700'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages || totalPages <= 1}
+                className="w-10 h-10 rounded-xl border border-zinc-100 bg-white hover:bg-zinc-50 disabled:opacity-40 transition-all flex items-center justify-center text-zinc-600"
+              >
+                <span className="material-symbols-outlined text-sm">chevron_right</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Details Dialog */}
@@ -224,7 +303,7 @@ const AdminOrdersPage = () => {
                 <div key={idx} className="flex justify-between items-center p-4 bg-zinc-50/50 rounded-xl border border-zinc-100">
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 bg-white border border-zinc-100 rounded-lg p-2 shrink-0">
-                      <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
+                      <img src={productImages[item.productId] || item.image || PLACEHOLDER_IMAGE} alt={item.name} className="w-full h-full object-contain" />
                     </div>
                     <div>
                       <p className="font-bold text-zinc-900 leading-tight text-sm">{item.name}</p>

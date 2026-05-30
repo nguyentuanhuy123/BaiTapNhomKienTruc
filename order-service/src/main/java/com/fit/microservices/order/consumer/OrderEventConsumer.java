@@ -32,7 +32,7 @@ public class OrderEventConsumer {
     @KafkaListener(topics = "payment_completed", groupId = "order-group", containerFactory = "paymentCompletedKafkaListenerContainerFactory")
     public void handlePaymentCompleted(PaymentCompletedEvent paymentCompletedEvent) {
         System.out.println("Nhận PaymentCompletedEvent cho order: "+paymentCompletedEvent.getOrderId());
-        orderService.updateOrderStatus(paymentCompletedEvent.getOrderId(), OrderStatus.COMPLETED);
+        orderService.updateOrderStatus(paymentCompletedEvent.getOrderId(), OrderStatus.COMPLETED, paymentCompletedEvent.getPaymentMethod());
     }
 
     @KafkaListener(topics = "payment_failed", groupId = "order-group", containerFactory = "paymentFailedKafkaListenerContainerFactory")

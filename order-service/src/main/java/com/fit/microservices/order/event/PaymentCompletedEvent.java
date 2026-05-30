@@ -10,4 +10,5 @@ public class PaymentCompletedEvent {
     private Long orderId;
     private String paymentId;
     private double amount;
+    private String paymentMethod;
 }
