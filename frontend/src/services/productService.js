@@ -9,13 +9,57 @@ const api = axios.create({
   },
 });
 
+const normalizeImage = (img) => ({
+  id: img?.id ?? null,
+  name: img?.name ?? '',
+  url: img?.url ?? ''
+});
+
+const normalizeProduct = (raw) => {
+  if (!raw || typeof raw !== 'object') return raw;
+
+  const imageResponses = Array.isArray(raw.imageResponses)
+    ? raw.imageResponses.map(normalizeImage)
+    : Array.isArray(raw.images)
+      ? raw.images.map(normalizeImage)
+      : [];
+
+  const categoryName = raw.categoryName ?? raw.category?.name ?? null;
+  const categoryId = raw.categoryId ?? raw.category?.id ?? null;
+
+  const mainImage = imageResponses[0]?.url || raw.image || '';
+
+  return {
+    ...raw,
+    categoryId,
+    categoryName,
+    image: mainImage,
+    imageResponses,
+    colors: Array.isArray(raw.colors) ? raw.colors : [],
+    sizes: Array.isArray(raw.sizes) ? raw.sizes : [],
+    foamTech: raw.foamTech ?? '',
+    plateTech: raw.plateTech ?? '',
+    upperTech: raw.upperTech ?? ''
+  };
+};
+
 export const productService = {
   getAllProducts: async (page = 0, size = 6, category = '', brand = '', color = '') => {
     try {
       const response = await api.get('/product', {
-        params: { page, size, category, brand, color }
+        params: {
+          page,
+          size,
+          category: category === 'All' ? null : category,
+          brand: brand === 'All' ? null : brand,
+          color: color === 'All' ? null : color
+        }
       });
-      return response.data;
+      const data = response.data;
+      if (data && Array.isArray(data.content)) {
+        return { ...data, content: data.content.map(normalizeProduct) };
+      }
+      return data;
     } catch (error) {
       console.error('Error fetching products:', error);
       throw error;
@@ -25,7 +69,7 @@ export const productService = {
   getProductById: async (id) => {
     try {
       const response = await api.get(`/product/${id}`);
-      return response.data;
+      return normalizeProduct(response.data);
     } catch (error) {
       console.error(`Error fetching product ${id}:`, error);
       throw error;
@@ -132,7 +176,11 @@ export const productService = {
       const response = await api.get('/product/flash-sale', {
         params: { page, size }
       });
-      return response.data;
+      const data = response.data;
+      if (data && Array.isArray(data.content)) {
+        return { ...data, content: data.content.map(normalizeProduct) };
+      }
+      return data;
     } catch (error) {
       console.error('Error fetching flash sale products:', error);
       throw error;

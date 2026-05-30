@@ -1,7 +1,8 @@
 package com.fit.microservices.produc.filter;
 
-import com.fit.microservices.produc.dto.UserPrincipal;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
@@ -9,6 +10,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,6 +30,23 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+
+        String path = request.getServletPath();
+        String method = request.getMethod();
+
+        // Public APIs
+        if (HttpMethod.GET.matches(method)) {
+
+            return path.startsWith("/api/product")
+                    || path.startsWith("/api/category")
+                    || path.startsWith("/api/comment");
+        }
+
+        return false;
+    }
+
+    @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
@@ -36,14 +55,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
 
+        // Không có token -> cho đi tiếp
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = authHeader.substring(7);
-
         try {
+            String token = authHeader.substring(7);
+
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(getSigningKey())
                     .build()
@@ -61,11 +81,32 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
-        } catch (Exception ex) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
-        }
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+
+        } catch (ExpiredJwtException e) {
+
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+
+            response.getWriter().write("""
+                {
+                  "error": "TOKEN_EXPIRED",
+                  "message": "JWT token has expired"
+                }
+            """);
+
+        } catch (JwtException | IllegalArgumentException e) {
+
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+
+            response.getWriter().write("""
+                {
+                  "error": "INVALID_TOKEN",
+                  "message": "Invalid JWT token"
+                }
+            """);
+        }
     }
 }

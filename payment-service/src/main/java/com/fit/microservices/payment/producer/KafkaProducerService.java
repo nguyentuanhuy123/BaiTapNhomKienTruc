@@ -10,8 +10,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class KafkaProducerService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
-    private static final String TOPIC_PAYMENT_COMPLETED = "payments";
-    private static final String TOPIC_PAYMENT_FAILED = "payments_failed";
+    private static final String TOPIC_PAYMENT_COMPLETED = "payment_completed";
+    private static final String TOPIC_PAYMENT_FAILED    = "payment_failed";
 
     public void sendPaymentCompleted(PaymentCompletedEvent event) {
         kafkaTemplate.send(TOPIC_PAYMENT_COMPLETED, String.valueOf(event.getOrderId()), event);
