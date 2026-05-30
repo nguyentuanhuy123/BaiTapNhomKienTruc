@@ -207,7 +207,7 @@ export const productService = {
 
   checkPurchase: async (skuCode) => {
     try {
-      const response = await api.get('/api/order/has-purchased', {
+      const response = await api.get('/order/has-purchased', {
         params: { skuCode },
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`

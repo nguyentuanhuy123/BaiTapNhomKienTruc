@@ -19,5 +19,15 @@ export const orderService = {
       console.error('Lỗi khi lấy thông tin đơn hàng:', error);
       throw error;
     }
+  },
+
+  updatePaymentMethod: async (orderId, paymentMethod) => {
+    try {
+      const response = await axiosClient.put(`/api/order/${orderId}/payment-method`, { paymentMethod });
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi cập nhật phương thức thanh toán:', error);
+      throw error;
+    }
   }
 };

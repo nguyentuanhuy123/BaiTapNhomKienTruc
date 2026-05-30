@@ -22,7 +22,7 @@ const ProductDetailPage = () => {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [isLiked, setIsLiked] = useState(false);
   const { isLoggedIn, user } = useAuth();
-  const [reviews, setReviews] = useState(commentService.getReviewsByProduct(id));
+  const [reviews, setReviews] = useState([]);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewContent, setReviewContent] = useState('');
@@ -33,6 +33,7 @@ const ProductDetailPage = () => {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [hasPurchased, setHasPurchased] = useState(false);
   const navigate = useNavigate();
+  const reviewsList = Array.isArray(reviews) ? reviews : [];
 
   const authErrorMessage = "Vui long dang nhap de them san pham vao gio hang.";
   const isAuthError = (e) => [401, 403].includes(e?.response?.status);
@@ -117,9 +118,13 @@ const ProductDetailPage = () => {
   }, [isLoggedIn, product]);
 
   useEffect(() => {
-    setReviews(commentService.getReviewsByProduct(id));
+    const loadReviews = async () => {
+      const data = await commentService.getReviewsByProduct(id);
+      setReviews(Array.isArray(data) ? data : []);
+    };
+    loadReviews();
     return commentService.subscribe(() => {
-      setReviews(commentService.getReviewsByProduct(id));
+      loadReviews();
     });
   }, [id]);
 
@@ -169,7 +174,7 @@ const ProductDetailPage = () => {
 
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
-    if (!reviewTitle || !reviewContent) return;
+    if (!reviewContent) return;
 
     setSubmitting(true);
     const commenterName = user?.name || user?.email || 'Khách hàng';
@@ -183,14 +188,20 @@ const ProductDetailPage = () => {
       }
     }
 
-    commentService.addReview(id, commenterName, reviewTitle, reviewContent, reviewRating, finalImage);
-    
-    setReviewTitle('');
-    setReviewContent('');
-    setReviewRating(5);
-    setReviewImage('');
-    setShowReviewForm(false);
-    setSubmitting(false);
+    try {
+      await commentService.addReview(id, commenterName, reviewTitle, reviewContent, reviewRating, finalImage);
+      setReviewTitle('');
+      setReviewContent('');
+      setReviewRating(5);
+      setReviewImage('');
+      setShowReviewForm(false);
+      alert("Đăng đánh giá thành công!");
+    } catch (err) {
+      console.error(err);
+      alert("Không thể đăng đánh giá. Vui lòng thử lại sau!");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleWriteReviewClick = () => {
@@ -581,13 +592,13 @@ const ProductDetailPage = () => {
                 <h2 className="text-label-sm font-black text-primary-container uppercase tracking-[0.3em] mb-8">Customer Reviews</h2>
                 <div className="flex items-end gap-6">
                   <p className="text-7xl font-black font-space-grotesk text-zinc-900 leading-none italic">
-                    {reviews.length > 0 ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length).toFixed(1) : "0.0"}
+                    {reviewsList.length > 0 ? (reviewsList.reduce((acc, curr) => acc + curr.rating, 0) / reviewsList.length).toFixed(1) : "0.0"}
                   </p>
                   <div className="mb-1">
                     <div className="flex text-amber-500 mb-2">
                       {[...Array(5)].map((_, j) => <span key={j} className="material-symbols-outlined fill-amber-500 text-sm">star</span>)}
                     </div>
-                    <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Based on {reviews.length} reviews</p>
+                    <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Based on {reviewsList.length} reviews</p>
                   </div>
                 </div>
               </div>
@@ -622,32 +633,19 @@ const ProductDetailPage = () => {
               <div className="bg-zinc-50 border border-zinc-100 rounded-[32px] p-8 mb-12 animate-fade-in">
                 <h3 className="text-lg font-black font-space-grotesk text-zinc-900 uppercase italic mb-6">Đánh giá của bạn</h3>
                 <form onSubmit={handleCommentSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Tiêu đề đánh giá</label>
-                      <input
-                        type="text"
-                        required
-                        value={reviewTitle}
-                        onChange={(e) => setReviewTitle(e.target.value)}
-                        placeholder="Ví dụ: Giày rất êm, ôm chân!"
-                        className="w-full bg-white border border-zinc-100 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container transition-all font-bold text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Đánh giá sao ({reviewRating} sao)</label>
-                      <select
-                        value={reviewRating}
-                        onChange={(e) => setReviewRating(parseInt(e.target.value))}
-                        className="w-full bg-white border border-zinc-100 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container transition-all font-bold text-sm"
-                      >
-                        <option value="5">⭐⭐⭐⭐⭐ 5 Sao - Tuyệt hảo</option>
-                        <option value="4">⭐⭐⭐⭐ 4 Sao - Rất tốt</option>
-                        <option value="3">⭐⭐⭐ 3 Sao - Bình thường</option>
-                        <option value="2">⭐⭐ 2 Sao - Tạm ổn</option>
-                        <option value="1">⭐ 1 Sao - Kém</option>
-                      </select>
-                    </div>
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-wider text-zinc-400 mb-2">Đánh giá sao ({reviewRating} sao)</label>
+                    <select
+                      value={reviewRating}
+                      onChange={(e) => setReviewRating(parseInt(e.target.value))}
+                      className="w-full bg-white border border-zinc-100 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-primary-container transition-all font-bold text-sm"
+                    >
+                      <option value="5">⭐⭐⭐⭐⭐ 5 Sao - Tuyệt hảo</option>
+                      <option value="4">⭐⭐⭐⭐ 4 Sao - Rất tốt</option>
+                      <option value="3">⭐⭐⭐ 3 Sao - Bình thường</option>
+                      <option value="2">⭐⭐ 2 Sao - Tạm ổn</option>
+                      <option value="1">⭐ 1 Sao - Kém</option>
+                    </select>
                   </div>
 
                   <div>
@@ -701,7 +699,7 @@ const ProductDetailPage = () => {
 
             {/* Reviews List */}
             <div className="space-y-12">
-              {reviews.map((rev) => (
+              {reviewsList.map((rev) => (
                 <div key={rev.id} className="border-b border-zinc-50 pb-12">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex text-amber-500 gap-0.5">
@@ -710,7 +708,7 @@ const ProductDetailPage = () => {
                     </div>
                     <span className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">{rev.date}</span>
                   </div>
-                  <h4 className="font-bold text-zinc-900 text-lg mb-4">{rev.title}</h4>
+                  {rev.title && <h4 className="font-bold text-zinc-900 text-lg mb-4">{rev.title}</h4>}
 
                   {/* Layout content with photo */}
                   <div className="flex flex-col md:flex-row gap-6 mb-6">
@@ -748,7 +746,7 @@ const ProductDetailPage = () => {
                 </div>
               ))}
 
-              {reviews.length === 0 && (
+              {reviewsList.length === 0 && (
                 <div className="text-center py-16 bg-zinc-50 rounded-3xl border border-zinc-100">
                   <span className="material-symbols-outlined text-4xl text-zinc-300 mb-2 block">forum</span>
                   <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Chưa có đánh giá nào cho sản phẩm này.</p>
