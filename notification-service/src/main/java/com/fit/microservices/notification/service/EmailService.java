@@ -331,7 +331,7 @@ public class EmailService {
             helper.setTo(toEmail);
             helper.setSubject("🔐 Reset your password");
 
-            String resetLink = "http://localhost:9000/forgot-password?token=" + resetToken;
+            String resetLink = "http://localhost:5173/forgot-password?token=" + resetToken;
             String htmlContent = """
                 <div style="font-family: Arial; background:#0f172a; padding:40px; color:white;">
                     <div style="max-width:500px;margin:auto;background:#1e293b;padding:30px;border-radius:10px;">

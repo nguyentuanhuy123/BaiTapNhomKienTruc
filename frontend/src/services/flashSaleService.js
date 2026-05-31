@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:9000/api/v1/flashsale'; // Định tuyến qua API Gateway cổng 9000
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:9000';
+const API_BASE_URL = `${BASE_URL}/api/v1/flashsale`;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -11,7 +12,7 @@ const api = axios.create({
 
 // Tự động đính kèm JWT token từ localStorage (nếu có)
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('accessToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
