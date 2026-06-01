@@ -193,6 +193,33 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public OrderResponse getOrderByOrderNumber(String orderNumber) {
+        Order order = orderRepository.findByOrderNumber(orderNumber).orElse(null);
+        if(order == null) return null;
+        List<OrderLineItemsDto> items = order.getOrderLineItemsList()
+                .stream()
+                .map(item->{
+                    OrderLineItemsDto itemDto = new OrderLineItemsDto();
+                    itemDto.setProductId(item.getProductId());
+                    itemDto.setSkuCode(item.getSkuCode());
+                    itemDto.setColor(item.getColor());
+                    itemDto.setSize(item.getSize());
+                    itemDto.setQuantity(item.getQuantity());
+                    itemDto.setPrice(item.getPrice());
+                    itemDto.setProductName(item.getProductName());
+                    return itemDto;
+                }).toList();
+        UserResponse userResponse = safelyFetchUser(order.getUserId());
+        OrderResponse response = new OrderResponse(order.getId(), order.getOrderNumber(), items, userResponse);
+        response.setOrderStatus(order.getOrderStatus().name());
+        response.setTotalPrice(order.getTotalPrice());
+        response.setCreatedAt(order.getCreatedAt());
+        response.setPaymentMethod(order.getPaymentMethod());
+        response.setShippingMethod(order.getShippingMethod());
+        return response;
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<OrderResponse> getAllOrders() {
         return orderRepository.findAll().stream()

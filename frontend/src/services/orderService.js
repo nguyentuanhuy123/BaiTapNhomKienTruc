@@ -1,9 +1,21 @@
 import axiosClient from '../api/axiosClient';
+import { notificationService } from './notificationService';
 
 export const orderService = {
   createOrder: async (orderData) => {
     try {
       const response = await axiosClient.post('/api/order', orderData);
+      
+      try {
+        notificationService.addAdminNotification(
+          'Đơn hàng mới được tạo',
+          `Đơn hàng #${response.data.orderId || response.data.id || 'đang xử lý'} vừa được tạo thành công bởi khách hàng "${orderData.userName || orderData.email || 'Ẩn danh'}".`,
+          'order_created'
+        );
+      } catch (notifErr) {
+        console.error('Lỗi khi gửi thông báo tạo đơn hàng cho admin:', notifErr);
+      }
+
       return response.data; // Expecting { orderId: "123", orderStatus: "PENDING" } or similar
     } catch (error) {
       console.error('Lỗi khi tạo đơn hàng:', error);

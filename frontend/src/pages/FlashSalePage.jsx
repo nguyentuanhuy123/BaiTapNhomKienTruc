@@ -50,6 +50,7 @@ const FlashSalePage = () => {
           const match = catalog.find(c => (c.skuCode || String(c.id)) === p.productId);
           return {
             ...p,
+            dbId: match?.id,
             image: match?.image || match?.imageResponses?.[0]?.url || '',
             imageResponses: match?.imageResponses || [],
             category: match?.categoryName || match?.category || 'Performance',
@@ -75,6 +76,7 @@ const FlashSalePage = () => {
             const match = catalog.find(c => (c.skuCode || String(c.id)) === p.productId);
             return {
               ...p,
+              dbId: match?.id,
               image: match?.image || match?.imageResponses?.[0]?.url || '',
               imageResponses: match?.imageResponses || [],
               category: match?.categoryName || match?.category || 'Performance',
@@ -232,7 +234,7 @@ const FlashSalePage = () => {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12 mb-32">
                   {products.map((p) => {
                     const mappedProduct = {
-                      id: p.productId,
+                      id: p.dbId || p.productId,
                       skuCode: p.productId,
                       name: p.name,
                       price: p.salePrice, // Show the configured discount Flash Sale Price!

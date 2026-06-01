@@ -23,7 +23,6 @@
         <module>payment-service</module>
         <module>notification-service</module>
         <module>auth-service</module>
-        <module>mcp-server</module>
         <module>flashsale-service</module>
         <module>chatbot-service</module>
     </modules>

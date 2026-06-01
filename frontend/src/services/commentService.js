@@ -85,5 +85,15 @@ export const commentService = {
       console.error(`Error adding reply to review ${reviewId}:`, error);
       throw error;
     }
+  },
+
+  async deleteReview(reviewId) {
+    try {
+      await axiosClient.delete(`/api/comment/${reviewId}`);
+      this.notify();
+    } catch (error) {
+      console.error(`Error deleting review ${reviewId}:`, error);
+      throw error;
+    }
   }
 };

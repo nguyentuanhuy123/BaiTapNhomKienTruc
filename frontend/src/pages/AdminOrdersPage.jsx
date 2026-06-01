@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { adminService } from '../services/adminService';
 import { productService } from '../services/productService';
 import { useAlert } from '../contexts/AlertContext';
+import paymentApi from '../api/paymentApi';
 
 const PLACEHOLDER_IMAGE = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png";
 
@@ -17,6 +18,19 @@ const AdminOrdersPage = () => {
   const { showAlert } = useAlert();
 
   const tabs = ['All', 'Pending', 'Processing', 'In Transit', 'Completed', 'Cancelled'];
+
+  const handleOpenDetails = async (order) => {
+    setSelectedOrder(order);
+    try {
+      const paymentInfo = await paymentApi.getPaymentByOrderId(order.orderId);
+      if (paymentInfo && paymentInfo.method) {
+        setSelectedOrder(prev => prev && prev.orderId === order.orderId ? { ...prev, method: paymentInfo.method } : prev);
+        setOrders(prevOrders => prevOrders.map(o => o.orderId === order.orderId ? { ...o, method: paymentInfo.method } : o));
+      }
+    } catch (err) {
+      console.error('Failed to fetch payment details for order:', err);
+    }
+  };
 
   useEffect(() => {
     fetchOrders();
@@ -198,7 +212,7 @@ const AdminOrdersPage = () => {
                   </td>
                   <td className="py-5 text-right flex items-center justify-end gap-3">
                     <button
-                      onClick={() => setSelectedOrder(order)}
+                      onClick={() => handleOpenDetails(order)}
                       className="px-4 py-2 border border-zinc-100 hover:border-zinc-300 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
                     >
                       DETAILS

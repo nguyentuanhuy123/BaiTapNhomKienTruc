@@ -5,8 +5,8 @@ import { chatbotService } from '../../services/chatbotService';
 const ChatbotWidget = () => {
   const { pathname } = useLocation();
   
-  // Do not render AI Chatbot on admin dashboard pages
-  if (pathname.startsWith('/admin')) {
+  // Do not render AI Chatbot on admin dashboard, login, or register pages
+  if (pathname.startsWith('/admin') || pathname === '/login' || pathname === '/register') {
     return null;
   }
 

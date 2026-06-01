@@ -46,10 +46,16 @@ public class OrderController {
     }
 
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    @Operation(summary = "Get order by ID")
+    @Operation(summary = "Get order by ID or Order Number")
     @GetMapping("/{orderId}")
-    public ResponseEntity<OrderResponse> getOrderById(@PathVariable Long orderId) {
-        return new ResponseEntity<>(orderService.getOrderById(orderId), HttpStatus.OK);
+    public ResponseEntity<OrderResponse> getOrderById(@PathVariable String orderId) {
+        try {
+            Long numericId = Long.parseLong(orderId);
+            return new ResponseEntity<>(orderService.getOrderById(numericId), HttpStatus.OK);
+        } catch (NumberFormatException e) {
+            // If it is not a numeric Long (i.e. it is a String UUID for Flash Sale orders)
+            return new ResponseEntity<>(orderService.getOrderByOrderNumber(orderId), HttpStatus.OK);
+        }
     }
 
     @PreAuthorize("hasRole('ADMIN')")

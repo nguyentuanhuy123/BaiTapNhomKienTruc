@@ -39,7 +39,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         Payment payment = paymentRepository
-                .findByOrderId(event.getOrderId())
+                .findFirstByOrderIdOrderByIdDesc(event.getOrderId())
                 .orElseGet(() -> {
                     Payment p = new Payment();
                     p.setOrderId(event.getOrderId());
