@@ -121,7 +121,8 @@ public class OrderServiceImpl implements OrderService {
                         item.getSize(),
                         item.getQuantity(),
                         item.getPrice(),
-                        item.getProductName()
+                        item.getProductName(),
+                        null
                 )).toList();
                 
         UserResponse userResponse = safelyFetchUser(order.getUserId());
@@ -169,6 +170,16 @@ public class OrderServiceImpl implements OrderService {
                     itemDto.setQuantity(item.getQuantity());
                     itemDto.setPrice(item.getPrice());
                     itemDto.setProductName(item.getProductName());
+//
+//                    try {
+//                        ProductResponse productResponse = productClient.getProductById(item.getProductId());
+//                        if (productResponse != null) {
+//                            itemDto.setImage(productResponse.getImage());
+//                        }
+//                    } catch (Exception e) {
+//                        System.err.println("Failed to fetch product image for product ID: " + item.getProductId() + " " + e.getMessage());
+//                    }
+
                     return itemDto;
                 }).toList();
         UserResponse userResponse = safelyFetchUser(order.getUserId());
@@ -197,6 +208,16 @@ public class OrderServiceImpl implements OrderService {
                                 itemDto.setQuantity(item.getQuantity());
                                 itemDto.setPrice(item.getPrice());
                                 itemDto.setProductName(item.getProductName());
+//
+//                                try {
+//                                    ProductResponse productResponse = productClient.getProductById(item.getProductId());
+//                                    if (productResponse != null) {
+//                                        itemDto.setImage(productResponse.getImage());
+//                                    }
+//                                } catch (Exception e) {
+//                                    System.err.println("Failed to fetch product image for product ID: " + item.getProductId() + " " + e.getMessage());
+//                                }
+
                                 return itemDto;
                             }).toList();
                     UserResponse userResponse = safelyFetchUser(order.getUserId());
@@ -227,6 +248,16 @@ public class OrderServiceImpl implements OrderService {
                                 itemDto.setQuantity(item.getQuantity());
                                 itemDto.setPrice(item.getPrice());
                                 itemDto.setProductName(item.getProductName());
+
+                                try {
+                                    ProductResponse productResponse = productClient.getProductById(item.getProductId());
+                                    if (productResponse != null) {
+                                        itemDto.setImage(productResponse.getImage());
+                                    }
+                                } catch (Exception e) {
+                                    System.err.println("Failed to fetch product image for product ID: " + item.getProductId() + " " + e.getMessage());
+                                }
+
                                 return itemDto;
                             }).toList();
                     UserResponse userResponse = safelyFetchUser(order.getUserId());

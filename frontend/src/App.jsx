@@ -15,6 +15,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import PaymentReturnPage from './pages/PaymentReturnPage';
 import ProfilePage from './pages/ProfilePage';
 import OrdersPage from './pages/OrdersPage';
+import OrderDetailPage from './pages/OrderDetailPage';
 import TechnologyPage from './pages/TechnologyPage';
 import WishlistPage from './pages/WishlistPage';
 import AdminFlashSalePage from './pages/AdminFlashSalePage';
@@ -62,6 +63,7 @@ function App() {
                 <Route path="/payment/return"    element={<PaymentReturnPage />} />
                 <Route path="/profile"           element={<ProfilePage />} />
                 <Route path="/orders"            element={<OrdersPage />} />
+                <Route path="/orders/:id"        element={<OrderDetailPage />} />
                 <Route path="/technology"        element={<TechnologyPage />} />
                 <Route path="/wishlist"          element={<WishlistPage />} />
                 {/* Admin Dashboard Nested Routes */}
