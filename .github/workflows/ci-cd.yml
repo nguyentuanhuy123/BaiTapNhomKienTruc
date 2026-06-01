@@ -68,6 +68,15 @@ jobs:
           git pull origin develop
           echo "${{ secrets.AWS_S3_ENV }}" > .env
           
+          echo "Checking and installing Maven/Java if not present..."
+          if ! command -v mvn &> /dev/null; then
+            echo "Installing Maven and OpenJDK 17..."
+            sudo apt-get update && sudo apt-get install -y maven openjdk-17-jdk
+          fi
+          
+          echo "Building all backend services (generating target/*.jar)..."
+          mvn clean package -DskipTests
+          
           echo "Stopping old containers..."
           docker compose down --remove-orphans
           
