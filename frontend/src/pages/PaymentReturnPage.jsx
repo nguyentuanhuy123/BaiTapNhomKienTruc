@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
+import { notificationService } from '../services/notificationService';
 
 /**
  * Trang kết quả sau khi VNPay redirect về.
@@ -19,6 +20,30 @@ const PaymentReturnPage = () => {
   const reason  = searchParams.get('reason');
 
   const isSuccess = status === 'success';
+
+  // Gửi thông báo cho Admin về trạng thái thanh toán VNPay
+  useEffect(() => {
+    if (orderId) {
+      try {
+        if (isSuccess) {
+          notificationService.addAdminNotification(
+            'Thanh toán VNPay thành công',
+            `Đơn hàng #${orderId} đã được thanh toán thành công qua VNPay. Số tiền: $${amount || '0.00'}.`,
+            'payment_success'
+          );
+        } else {
+          const errorMsg = reason ? `Lỗi (mã: ${reason})` : 'Thanh toán không thành công.';
+          notificationService.addAdminNotification(
+            'Thanh toán VNPay thất bại',
+            `Giao dịch thanh toán cho đơn hàng #${orderId} qua VNPay thất bại. Lý do: ${errorMsg}`,
+            'payment_failed'
+          );
+        }
+      } catch (err) {
+        console.error('Lỗi khi gửi thông báo thanh toán cho admin:', err);
+      }
+    }
+  }, [isSuccess, orderId, amount, reason]);
 
   // Clear giỏ hàng ở frontend nếu thanh toán thành công
   useEffect(() => {

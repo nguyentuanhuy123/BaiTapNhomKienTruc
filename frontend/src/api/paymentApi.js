@@ -31,6 +31,21 @@ const paymentApi = {
 
     return res.json();
   },
+
+  /**
+   * Lấy phương thức thanh toán thực tế của đơn hàng từ payment-service
+   * @param {number|string} orderId 
+   */
+  getPaymentByOrderId: async (orderId) => {
+    try {
+      const res = await fetch(`${PAYMENT_BASE_URL}/api/payment/order/${orderId}`);
+      if (!res.ok) return null;
+      return await res.json(); // Trả về { method: "COD" | "VNPAY", status: "SUCCESS" | "FAILED" | "PENDING" }
+    } catch (err) {
+      console.error('Error fetching order payment method:', err);
+      return null;
+    }
+  }
 };
 
 export default paymentApi;

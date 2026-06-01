@@ -9,4 +9,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 public interface ProductClient {
     @GetMapping("/api/product/{id}")
     ProductResponse getProductById(@PathVariable("id") Long id);
+
+    @GetMapping("/api/product")
+    java.util.Map<String, Object> getAllProducts(
+            @org.springframework.web.bind.annotation.RequestParam("page") int page,
+            @org.springframework.web.bind.annotation.RequestParam("size") int size
+    );
 }

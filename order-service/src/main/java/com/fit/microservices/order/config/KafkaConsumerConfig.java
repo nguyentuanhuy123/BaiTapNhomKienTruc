@@ -80,7 +80,6 @@ public class KafkaConsumerConfig {
         return factory;
     }
 
-    // InventoryDeductedEvent
     @Bean
     public ConsumerFactory<String, InventoryDeductedEvent> inventoryDeductedConsumerFactory(){
         return new DefaultKafkaConsumerFactory<>(
@@ -94,6 +93,23 @@ public class KafkaConsumerConfig {
     public ConcurrentKafkaListenerContainerFactory<String, InventoryDeductedEvent> inventoryDeductedKafkaListenerContainerFactory(){
         ConcurrentKafkaListenerContainerFactory<String, InventoryDeductedEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(inventoryDeductedConsumerFactory());
+        return factory;
+    }
+
+    // FlashSaleOrderSuccessEvent
+    @Bean
+    public ConsumerFactory<String, com.fit.microservices.order.event.FlashSaleOrderSuccessEvent> flashSaleOrderSuccessConsumerFactory(){
+        return new DefaultKafkaConsumerFactory<>(
+                baseProps("order-service-flash-sale-success"),
+                new StringDeserializer(),
+                new JsonDeserializer<>(com.fit.microservices.order.event.FlashSaleOrderSuccessEvent.class, false)
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, com.fit.microservices.order.event.FlashSaleOrderSuccessEvent> flashSaleOrderSuccessKafkaListenerContainerFactory(){
+        ConcurrentKafkaListenerContainerFactory<String, com.fit.microservices.order.event.FlashSaleOrderSuccessEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(flashSaleOrderSuccessConsumerFactory());
         return factory;
     }
 

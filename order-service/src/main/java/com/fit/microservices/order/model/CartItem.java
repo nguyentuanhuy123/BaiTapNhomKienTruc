@@ -21,6 +21,7 @@ public class CartItem {
     private Long productId;
     private String name;
     private Double price;
+    @Column(columnDefinition = "TEXT")
     private String image;
     private Integer quantity;
     private String size;

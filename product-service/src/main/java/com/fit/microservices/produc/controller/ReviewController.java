@@ -47,4 +47,11 @@ public class ReviewController {
     public ReviewResponse addAdminReply(@PathVariable Long reviewId, @RequestBody ReviewReplyRequest request) {
         return reviewService.addAdminReply(reviewId, request);
     }
+
+    @Operation(summary = "Delete a review")
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteReview(@PathVariable Long id) {
+        reviewService.deleteReview(id);
+    }
 }

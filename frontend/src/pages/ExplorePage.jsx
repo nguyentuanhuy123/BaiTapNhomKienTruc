@@ -13,13 +13,13 @@ const ExplorePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedBrand, setSelectedBrand] = useState('All');
-  const [selectedColor, setSelectedColor] = useState('All');
+  const [selectedPriceRange, setSelectedPriceRange] = useState('All');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
 
   // Reset page to 0 when filters change
   useEffect(() => {
     setCurrentPage(0);
-  }, [selectedCategory, selectedBrand, selectedColor, searchQuery]);
+  }, [selectedCategory, selectedBrand, selectedPriceRange, searchQuery]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
@@ -32,7 +32,7 @@ const ExplorePage = () => {
       try {
         setLoading(true);
         const [productsData, categoriesData] = await Promise.all([
-          productService.getAllProducts(currentPage, PAGE_SIZE, selectedCategory, selectedBrand, selectedColor),
+          productService.getAllProducts(currentPage, PAGE_SIZE, selectedCategory, selectedBrand, 'All'),
           productService.getAllCategories()
         ]);
         setProducts(productsData.content || []);
@@ -47,12 +47,27 @@ const ExplorePage = () => {
     };
 
     fetchData();
-  }, [currentPage, selectedCategory, selectedBrand, selectedColor]);
+  }, [currentPage, selectedCategory, selectedBrand]);
 
-  // Frontend search filter remains for real-time feel if desired, 
-  // but backend handles category/brand/color
+  // Smooth scroll to top when current page or any filters are updated
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage, selectedCategory, selectedBrand, selectedPriceRange]);
+
+  // Client side search and price range filtering
   const filteredProducts = products.filter(product => {
-    return product.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    let matchesPrice = true;
+    if (selectedPriceRange === 'under-50') {
+      matchesPrice = product.price < 50;
+    } else if (selectedPriceRange === '50-100') {
+      matchesPrice = product.price >= 50 && product.price <= 100;
+    } else if (selectedPriceRange === 'above-100') {
+      matchesPrice = product.price > 100;
+    }
+
+    return matchesSearch && matchesPrice;
   });
 
   return (
@@ -123,23 +138,28 @@ const ExplorePage = () => {
               </div>
             </div>
 
-            {/* Color Filter */}
+            {/* Price Range Filter */}
             <div>
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-label-md font-bold text-zinc-400 uppercase tracking-widest">Color</h3>
-                {selectedColor !== 'All' && (
-                  <button onClick={() => setSelectedColor('All')} className="text-[10px] font-bold text-primary-container hover:underline">RESET</button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {FILTER_OPTIONS.colors.map((color) => (
-                  <button
-                    key={color.value}
-                    onClick={() => setSelectedColor(selectedColor === color.value ? 'All' : color.value)}
-                    className={`w-8 h-8 rounded-full border-2 transition-all ${selectedColor === color.value ? 'border-primary-container scale-110 shadow-lg' : 'border-zinc-100 hover:scale-110'}`}
-                    style={{ backgroundColor: color.value }}
-                    title={color.name}
-                  />
+              <h3 className="text-label-md font-bold text-zinc-400 uppercase tracking-widest mb-6">Price Range</h3>
+              <div className="space-y-4">
+                {[
+                  { value: 'All', label: 'All Prices' },
+                  { value: 'under-50', label: 'Under $50' },
+                  { value: '50-100', label: '$50 - $100' },
+                  { value: 'above-100', label: 'Over $100' }
+                ].map((range) => (
+                  <label key={range.value} className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="radio"
+                      name="priceRange"
+                      checked={selectedPriceRange === range.value}
+                      onChange={() => setSelectedPriceRange(range.value)}
+                      className="w-5 h-5 border-2 border-zinc-200 text-primary-container focus:ring-primary-container focus:ring-offset-0 focus:ring-0 checked:bg-primary-container checked:border-primary-container transition-all cursor-pointer"
+                    />
+                    <span className={`text-body-md ${selectedPriceRange === range.value ? 'text-zinc-900 font-bold' : 'text-zinc-500 group-hover:text-zinc-900'}`}>
+                      {range.label}
+                    </span>
+                  </label>
                 ))}
               </div>
             </div>

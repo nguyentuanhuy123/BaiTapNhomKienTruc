@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { productService } from '../../services/productService';
 
@@ -11,6 +11,7 @@ const ProductCard = ({
   onToggleWishlist,
   isFlashSale = false 
 }) => {
+  const navigate = useNavigate();
   // Check if this product is active in an ongoing Flash Sale campaign
   const storedActiveProds = JSON.parse(localStorage.getItem('active_flash_sale_products') || '[]');
   const matchedFlashSale = storedActiveProds.find(p => p.productId === product.id || p.productId === product.skuCode);
@@ -51,6 +52,36 @@ const ProductCard = ({
     } catch (err) {
       console.error('Error toggling wishlist:', err);
     }
+  };
+
+  const handleBuyNow = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const username = localStorage.getItem('userEmail');
+    if (!username) {
+      alert('Vui lòng đăng nhập để tiến hành giật deal mua ngay!');
+      navigate('/login');
+      return;
+    }
+
+    // Chuyển hướng thẳng sang Checkout với state directItem
+    navigate('/checkout', {
+      state: {
+        directItem: {
+          id: product.id,
+          productId: product.id,
+          name: product.name,
+          skuCode: product.skuCode || product.name,
+          size: '41', // Mặc định size giày nam
+          color: 'Default',
+          qty: 1,
+          price: displayPrice,
+          image: mainImage,
+          isFlashSale: isFlashSale
+        }
+      }
+    });
   };
 
   const CardWrapper = ({ children, to }) => {
@@ -106,8 +137,9 @@ const ProductCard = ({
   };
 
   if (layout === "list") {
+    const isSoldOut = isFlashSale && product.stock <= 0;
     return (
-      <motion.div whileHover={{ x: 10 }} transition={{ duration: 0.3 }}>
+      <motion.div whileHover={isSoldOut ? {} : { x: 10 }} transition={{ duration: 0.3 }}>
         <div 
           className={`bg-white rounded-[24px] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.06)] group border border-zinc-50 transition-all flex gap-8 ${className}`}
         >
@@ -119,9 +151,18 @@ const ProductCard = ({
             )}
             <img 
               alt={product.name} 
-              className="w-[85%] object-contain group-hover:scale-110 transition-transform duration-700 ease-out" 
+              className={`w-[85%] object-contain transition-transform duration-700 ease-out ${
+                isSoldOut ? 'grayscale opacity-40' : 'group-hover:scale-110'
+              }`} 
               src={mainImage} 
             />
+            {isSoldOut && (
+              <div className="absolute inset-0 bg-zinc-950/40 backdrop-blur-[1px] flex items-center justify-center">
+                <span className="bg-zinc-900/90 text-white border border-white/10 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-[0.15em] rotate-[-6deg] italic shadow-lg">
+                  SOLD OUT
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex-1 flex flex-col justify-between py-3">
@@ -155,7 +196,11 @@ const ProductCard = ({
                 >
                   <span className={`material-symbols-outlined ${isLiked ? 'fill-red-500' : ''}`}>favorite</span>
                 </button>
-                {matchedFlashSale ? (
+                {isSoldOut ? (
+                  <button disabled className="bg-zinc-300 text-zinc-500 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest cursor-not-allowed">
+                    SOLD OUT
+                  </button>
+                ) : matchedFlashSale ? (
                   <Link to="/flashsale" className="bg-red-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] transition-all shadow-xl shadow-red-900/10 flex items-center gap-1">
                     <span className="material-symbols-outlined text-sm">bolt</span> GIẬT DEAL
                   </Link>
@@ -172,8 +217,10 @@ const ProductCard = ({
     );
   }
 
+  const isSoldOut = isFlashSale && product.stock <= 0;
+
   return (
-    <CardWrapper to={`/product/${product.id}`}>
+    <CardWrapper to={isSoldOut ? null : `/product/${product.id}`}>
       <div className="relative w-full aspect-[4/5] rounded-[24px] bg-zinc-50 mb-6 flex items-center justify-center overflow-hidden">
         {displayTag && (
           <span className={`absolute top-4 left-4 px-3 py-1 rounded-full text-[9px] font-black uppercase z-10 ${matchedFlashSale ? 'bg-red-600 text-white animate-pulse' : 'bg-zinc-900 text-white'}`}>
@@ -183,19 +230,31 @@ const ProductCard = ({
         
         <img 
           alt={product.name} 
-          className="w-[85%] object-contain group-hover:scale-110 group-hover:-rotate-3 transition-all duration-700 ease-out" 
+          className={`w-[85%] object-contain transition-all duration-700 ease-out ${
+            isSoldOut ? 'grayscale opacity-40' : 'group-hover:scale-110 group-hover:-rotate-3'
+          }`} 
           src={mainImage} 
         />
         
+        {isSoldOut && (
+          <div className="absolute inset-0 bg-zinc-950/40 backdrop-blur-[1px] flex items-center justify-center">
+            <span className="bg-zinc-900/90 text-white border border-white/10 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-2xl scale-110 rotate-[-8deg] italic">
+              SOLD OUT
+            </span>
+          </div>
+        )}
+        
         {/* Quick View Overlay */}
-        <div className="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        {!isSoldOut && <div className="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />}
       </div>
 
       <div className="px-1">
         <p className="text-blue-600 text-[9px] font-black uppercase tracking-[0.2em] mb-1">
           {product.categoryName || product.category || 'Performance'}
         </p>
-        <h3 className="font-space-grotesk font-black text-zinc-900 uppercase italic text-lg leading-tight mb-4 group-hover:text-blue-600 transition-colors">
+        <h3 className={`font-space-grotesk font-black text-zinc-900 uppercase italic text-lg leading-tight mb-4 transition-colors ${
+          isSoldOut ? '' : 'group-hover:text-blue-600'
+        }`}>
           {product.name}
         </h3>
 
@@ -218,6 +277,23 @@ const ProductCard = ({
             >
               <span className={`material-symbols-outlined text-xl ${isLiked ? 'fill-red-500' : ''}`}>favorite</span>
             </button>
+            {isFlashSale && (
+              isSoldOut ? (
+                <button 
+                  disabled
+                  className="bg-zinc-150 text-zinc-400 px-3 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-wider cursor-not-allowed flex items-center gap-1 border border-zinc-200"
+                >
+                  <span className="material-symbols-outlined text-xs">block</span> SOLD OUT
+                </button>
+              ) : (
+                <button 
+                  onClick={handleBuyNow}
+                  className="bg-red-600 text-white px-3 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-wider hover:scale-[1.05] active:scale-95 transition-all flex items-center gap-1 shadow-lg shadow-red-600/20"
+                >
+                  <span className="material-symbols-outlined text-xs">bolt</span> MUA NGAY
+                </button>
+              )
+            )}
             {matchedFlashSale && !isFlashSale && (
               <Link 
                 to="/flashsale"

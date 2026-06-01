@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +8,7 @@ import { cartService } from '../services/cartService';
 import { orderService } from '../services/orderService';
 import paymentApi from '../api/paymentApi';
 import userApi from '../api/userApi';
+import { flashSaleService } from '../services/flashSaleService';
 
 const parseAddress = (raw) => {
   if (!raw) return { street: '', ward: '', district: '', city: '' };
@@ -26,6 +27,9 @@ const parseAddress = (raw) => {
 const CheckoutPage = () => {
   const { user } = useAuth();
   const { sendAdminNotification } = useUserStatusContext();
+  const location = useLocation();
+  const directItem = location.state?.directItem;
+
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [shippingMethod, setShippingMethod] = useState('standard');
@@ -59,29 +63,46 @@ const CheckoutPage = () => {
       try {
         setError('');
         setLoading(true);
-        const data = await cartService.getCart();
-        const items = (data?.items || []).map((it) => ({
-          id: it.id,
-          productId: it.productId || it.id,
-          name: it.name || it.skuCode,
-          skuCode: it.skuCode,
-          size: it.size || 'N/A',
-          color: it.color || 'Default',
-          qty: it.quantity ?? 0,
-          price: it.price || 0,
-          image: it.image || 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png',
-        }));
-        if (isMounted) setCartItems(items);
+        if (directItem) {
+          // Bỏ qua giỏ hàng, nạp trực tiếp sản phẩm Mua Ngay
+          const items = [{
+            id: directItem.id,
+            productId: directItem.productId || directItem.id,
+            name: directItem.name || directItem.skuCode,
+            skuCode: directItem.skuCode,
+            size: directItem.size || 'N/A',
+            color: directItem.color || 'Default',
+            qty: directItem.qty ?? 1,
+            price: directItem.price || 0,
+            image: directItem.image || 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png',
+          }];
+          if (isMounted) setCartItems(items);
+        } else {
+          // Nạp giỏ hàng thông thường từ server
+          const data = await cartService.getCart();
+          const items = (data?.items || []).map((it) => ({
+            id: it.id,
+            productId: it.productId || it.id,
+            name: it.name || it.skuCode,
+            skuCode: it.skuCode,
+            size: it.size || 'N/A',
+            color: it.color || 'Default',
+            qty: it.quantity ?? 0,
+            price: it.price || 0,
+            image: it.image || 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/480px-No_image_available.svg.png',
+          }));
+          if (isMounted) setCartItems(items);
+        }
       } catch (error) {
         console.error(error);
-        if (isMounted) setError('Failed to load cart. Please try again.');
+        if (isMounted) setError('Failed to load checkout details. Please try again.');
       } finally {
         if (isMounted) setLoading(false);
       }
     };
     fetchCart();
     return () => { isMounted = false; };
-  }, []);
+  }, [directItem]);
 
   // Fetch user profile và tự điền địa chỉ
   useEffect(() => {
@@ -149,11 +170,27 @@ const CheckoutPage = () => {
     try {
       setError('');
       setIsProcessingOrder(true);
-      const payload = generateOrderDraft();
-      const response = await orderService.createOrder(payload);
-      const orderId = response?.orderId || response?.id || response;
-      setCurrentOrderId(orderId);
-      pollOrderStatus(orderId);
+
+      const isFlashSale = directItem?.isFlashSale;
+      if (isFlashSale) {
+        // Luồng Checkout Flash Sale siêu tốc trên RAM Hazelcast + Kafka
+        const productId = directItem.skuCode || directItem.name;
+        const userId = String(user?.id || localStorage.getItem('userId') || '2');
+        const qty = directItem.qty || 1;
+
+        const response = await flashSaleService.checkoutFlashSale(productId, userId, qty);
+        // Trả về: successEvent = { orderId, productId, userId, quantity, price, status }
+        const orderId = response?.orderId || response;
+        setCurrentOrderId(orderId);
+        pollOrderStatus(orderId);
+      } else {
+        // Luồng mua hàng thông thường
+        const payload = generateOrderDraft();
+        const response = await orderService.createOrder(payload);
+        const orderId = response?.orderId || response?.id || response;
+        setCurrentOrderId(orderId);
+        pollOrderStatus(orderId);
+      }
     } catch (err) {
       console.error(err);
       setError('Đã xảy ra lỗi khi tạo đơn hàng. Vui lòng thử lại.');
@@ -171,6 +208,9 @@ const CheckoutPage = () => {
         if (status === 'AWAITING_PAYMENT') {
           clearInterval(intervalId);
           setIsProcessingOrder(false);
+          if (orderData.id) {
+            setCurrentOrderId(orderData.id);
+          }
           setStep(2);
         } else if (status === 'CANCELLED') {
           clearInterval(intervalId);

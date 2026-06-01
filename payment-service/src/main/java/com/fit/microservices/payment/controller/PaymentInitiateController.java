@@ -7,6 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.fit.microservices.payment.repository.PaymentRepository;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/payment")
 @RequiredArgsConstructor
@@ -14,6 +17,20 @@ import org.springframework.web.bind.annotation.*;
 public class PaymentInitiateController {
 
     private final PaymentService paymentService;
+    private final PaymentRepository paymentRepository;
+
+    /**
+     * Lấy phương thức thanh toán của đơn hàng từ DB payment_service.
+     */
+    @GetMapping("/order/{orderId}")
+    public ResponseEntity<Map<String, String>> getPaymentByOrderId(@PathVariable Long orderId) {
+        return paymentRepository.findFirstByOrderIdOrderByIdDesc(orderId)
+                .map(p -> ResponseEntity.ok(Map.of(
+                        "method", p.getMethod().name(),
+                        "status", p.getStatus().name()
+                )))
+                .orElse(ResponseEntity.notFound().build());
+    }
 
     /**
      * FE gọi endpoint này khi người dùng bấm "Place Order" ở checkout.
@@ -26,3 +43,4 @@ public class PaymentInitiateController {
         return ResponseEntity.ok(response);
     }
 }
+

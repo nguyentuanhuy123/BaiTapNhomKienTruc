@@ -78,6 +78,12 @@ public class ReviewServiceImpl implements ReviewService {
         return mapToReviewResponse(updatedReview);
     }
 
+    @Override
+    @Transactional
+    public void deleteReview(Long id) {
+        reviewRepository.deleteById(id);
+    }
+
     private ReviewResponse mapToReviewResponse(Review review) {
         List<ReviewReplyResponse> replies = review.getReplies() != null ? review.getReplies().stream()
                 .map(this::mapToReviewReplyResponse)

@@ -33,6 +33,7 @@ const AdminProductsPage = () => {
 
   useEffect(() => {
     fetchProductsData(currentPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
 
   const fetchProductsData = async (page) => {
