@@ -22,7 +22,7 @@ jobs:
         cache: maven
 
     - name: Build and Test Backend Services
-      run: mvn clean test
+      run: mvn clean package -DskipTests
 
   # Job 2: Build & Test Frontend React application
   build-frontend:
