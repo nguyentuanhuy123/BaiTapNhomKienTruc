@@ -94,5 +94,17 @@ jobs:
           echo "Starting batch 6: Supporting & Monitoring Services..."
           docker compose up -d notification-service chatbot-service flashsale-service kafka-ui zipkin prometheus grafana frontend
           
+          echo "Waiting 15 seconds for services to initialize diagnostics..."
+          sleep 15
+          
+          echo "=== DOCKER CONTAINER STATUS ==="
+          docker ps -a
+          
+          echo "=== DISCOVERY SERVER LOGS ==="
+          docker logs discovery-server --tail 50
+          
+          echo "=== API GATEWAY LOGS ==="
+          docker logs api-gateway --tail 50
+          
           echo "Deployment initiated successfully!"
 
