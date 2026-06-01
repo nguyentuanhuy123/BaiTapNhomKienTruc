@@ -132,6 +132,12 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin-ecommerce
+    ports:
+      - "9411:9411"
+    restart: always
 volumes:
   product_data:
   user_data:

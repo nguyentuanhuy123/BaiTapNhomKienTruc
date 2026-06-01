@@ -11,4 +11,5 @@ public interface ReviewService {
     List<ReviewResponse> getReviewsByProduct(Long productId);
     List<ReviewResponse> getAllReviews();
     ReviewResponse addAdminReply(Long reviewId, ReviewReplyRequest request);
+    void deleteReview(Long id);
 }

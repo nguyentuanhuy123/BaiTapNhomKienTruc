@@ -30,7 +30,8 @@ public class Endpoints {
     };
     public static final String[] ADMIN_DELETE_ENDPOINTS = {
             "/api/product/**",
-            "/api/category/**"
+            "/api/category/**",
+            "/api/comment/**"
     };
     public static final String[] ADMIN_PUT_ENDPOINTS = {
             "/api/product/**",

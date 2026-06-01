@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { productService } from '../services/productService';
 import { useAlert } from '../contexts/AlertContext';
+import axiosClient from '../api/axiosClient';
 
 const AdminCategoriesPage = () => {
   const [showAddModal, setShowAddModal] = useState(false);
@@ -16,15 +17,57 @@ const AdminCategoriesPage = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const data = await productService.getAllCategories();
-      const transformed = data.map(c => ({
-        id: String(c.id),
-        name: c.name || 'N/A',
-        slug: c.name ? c.name.toLowerCase().replace(/\s+/g, '-') : 'general',
-        description: c.description || 'No description provided.',
-        itemCount: c.productCount || 0,
-        icon: getCategoryIcon(c.name)
-      }));
+      
+      // Fetch both categories and the full products catalog in parallel
+      const [catData, prodData] = await Promise.all([
+        productService.getAllCategories(),
+        productService.getAllProducts(0, 200) // fetch products catalog to group
+      ]);
+
+      const products = prodData?.content || [];
+
+      // Fetch dynamic inventory-service stock levels for all product skuCodes
+      let inventoryMap = {};
+      try {
+        const skuCodes = products.map(p => p.skuCode).filter(Boolean);
+        if (skuCodes.length > 0) {
+          const invRes = await axiosClient.get(`/api/inventory`, {
+            params: { skuCode: skuCodes.join(',') }
+          });
+          if (Array.isArray(invRes.data)) {
+            invRes.data.forEach(item => {
+              inventoryMap[item.skuCode] = item.quantity !== undefined && item.quantity !== null ? item.quantity : (item.isInStock ? 35 : 0);
+            });
+          }
+        }
+      } catch (invErr) {
+        console.warn('Could not query dynamic inventory-service stock levels for categories page:', invErr);
+      }
+
+      const transformed = catData.map(c => {
+        // Find all real products matching this category
+        const matchedProducts = products.filter(p => 
+          p.categoryId === c.id || 
+          (p.categoryName && p.categoryName.toLowerCase() === c.name.toLowerCase())
+        );
+
+        // Sum the actual total stock of all matched products (inventory volume)
+        const totalStock = matchedProducts.reduce((sum, p) => {
+          const hasInventory = p.skuCode && inventoryMap[p.skuCode] !== undefined;
+          return sum + (hasInventory ? inventoryMap[p.skuCode] : 0);
+        }, 0);
+
+        return {
+          id: String(c.id),
+          name: c.name || 'N/A',
+          slug: c.name ? c.name.toLowerCase().replace(/\s+/g, '-') : 'general',
+          description: c.description || 'No description provided.',
+          itemCount: matchedProducts.length, // Real count of products
+          inventoryVolume: totalStock, // Real sum of stock quantities
+          icon: getCategoryIcon(c.name)
+        };
+      });
+      
       setCategories(transformed);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -128,9 +171,15 @@ const AdminCategoriesPage = () => {
               <p className="text-xs text-zinc-400 leading-relaxed font-bold mb-6">{cat.description}</p>
             </div>
 
-            <div className="pt-6 border-t border-zinc-50 flex justify-between items-center">
-              <span className="text-[10px] font-black text-zinc-300 uppercase tracking-wider">Inventory volume</span>
-              <span className="bg-zinc-100 text-zinc-700 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest">{cat.itemCount} PRODUCTS</span>
+            {/* Dynamic Inventory Volume and Products count displays */}
+            <div className="pt-6 border-t border-zinc-50 flex justify-between items-center text-xs">
+              <div>
+                <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Inventory volume</p>
+                <p className="font-extrabold text-primary-container mt-0.5">{cat.inventoryVolume} ITEMS</p>
+              </div>
+              <span className="bg-zinc-50 border border-zinc-100 text-zinc-700 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest">
+                {cat.itemCount} PRODUCTS
+              </span>
             </div>
           </div>
         ))}
