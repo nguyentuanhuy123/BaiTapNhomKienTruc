@@ -159,6 +159,7 @@ services:
       - "8761:8761"
     environment:
       - EUREKA_INSTANCE_HOSTNAME=discovery-server
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
 
   api-gateway:
     build: ./api-gateway
@@ -173,6 +174,7 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
       - SPRING_DATA_REDIS_HOST=redis-ecommerce
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-ecommerce:9411/api/v2/spans
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
 
   auth-service:
     build: ./auth-service
@@ -185,6 +187,7 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-auth:3306/auth_service
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
 
   product-service:
     build: ./product-service
@@ -199,6 +202,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-product:3306/product_service
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-ecommerce:9411/api/v2/spans
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
 
   order-service:
     build: ./order-service
@@ -215,6 +219,7 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-ecommerce:9411/api/v2/spans
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
 
   payment-service:
     build: ./payment-service
@@ -231,6 +236,7 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-ecommerce:9411/api/v2/spans
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
 
   user-service:
     build: ./user-service
@@ -247,6 +253,7 @@ services:
       - AWS_SECRET_KEY=${AWS_SECRET_KEY}
       - AWS_S3_REGION=${AWS_S3_REGION}
       - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME}
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
 
   chatbot-service:
     build: ./chatbot-service
@@ -257,6 +264,7 @@ services:
       - discovery-server
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
 
   flashsale-service:
     build: ./flashsale-service
@@ -267,6 +275,7 @@ services:
       - discovery-server
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
 
   inventory-service:
     build: ./inventory-service
@@ -279,6 +288,7 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-inventory:3306/inventory_service
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
 
   notification-service:
     build: ./notification-service
@@ -289,6 +299,7 @@ services:
       - discovery-server
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
 
   frontend:
     build: ./frontend
