@@ -134,7 +134,12 @@ const OrdersPage = () => {
                     <p className="text-2xl font-black font-space-grotesk italic text-zinc-900 mb-6">${order.total ? order.total.toFixed(2) : '0.00'}</p>
                     <div className="flex gap-3 w-full md:w-auto">
                       <button className="flex-1 md:flex-none px-6 py-3 bg-zinc-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all">Cancel</button>
-                      <button className="flex-1 md:flex-none px-6 py-3 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">View Details</button>
+                      <button 
+                        onClick={() => window.location.href = `/orders/${order.id}`}
+                        className="flex-1 md:flex-none px-6 py-3 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
+                      >
+                        View Details
+                      </button>
                     </div>
                   </div>
                 </div>
