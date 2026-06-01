@@ -1,5 +1,6 @@
 version: '3.9'
 services:
+  # Databases & Infrastructures
   mysql-product:
     image: mysql:8.3.0
     container_name: mysql-product
@@ -13,6 +14,7 @@ services:
     volumes:
       - product_data:/var/lib/mysql
     restart: always
+
   mysql-order:
     image: mysql:8.3.0
     container_name: mysql-order
@@ -26,6 +28,7 @@ services:
     volumes:
       - order_data:/var/lib/mysql
     restart: always
+
   mysql-payment:
     image: mysql:8.3.0
     container_name: mysql-payment
@@ -53,6 +56,7 @@ services:
     volumes:
       - auth_data:/var/lib/mysql
     restart: always
+
   mysql-inventory:
     image: mysql:8.3.0
     container_name: mysql-inventory
@@ -79,11 +83,13 @@ services:
     volumes:
       - user_data:/var/lib/postgresql/data
     restart: always
+
   redis:
     image: redis:7
     container_name: redis-ecommerce
     ports:
       - "6379:6379"
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper-ecommerce
@@ -92,6 +98,7 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+
   kafka:
     image: confluentinc/cp-kafka:7.4.4
     container_name: kafka
@@ -102,24 +109,31 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      # Thêm dòng này để định nghĩa 2 cổng: 9092 cho máy thật, 29092 cho Docker nội bộ
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     ports:
-      - "8888:8888" # Bạn sẽ truy cập vào localhost:8080
+      - "8888:8888"
     depends_on:
       - kafka
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:29092 # Kết nối qua cổng nội bộ
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:29092
       - DYNAMIC_CONFIG_ENABLED=true
-  #Monitoring with prometheus and grafana
+
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin-ecommerce
+    ports:
+      - "9411:9411"
+    restart: always
+
   prometheus:
     image: prom/prometheus
     ports:
@@ -127,17 +141,175 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     restart: unless-stopped
+
   grafana:
     image: grafana/grafana
     ports:
       - "3000:3000"
     restart: unless-stopped
-  zipkin:
-    image: openzipkin/zipkin
-    container_name: zipkin-ecommerce
+
+  # ==========================================
+  # APPLICATION MICROSERVICES
+  # ==========================================
+
+  discovery-server:
+    build: ./discovery-server
+    container_name: discovery-server
     ports:
-      - "9411:9411"
+      - "8761:8761"
+    environment:
+      - EUREKA_INSTANCE_HOSTNAME=discovery-server
     restart: always
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "9000:9000"
+    depends_on:
+      - discovery-server
+      - redis
+      - zipkin
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_DATA_REDIS_HOST=redis-ecommerce
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-ecommerce:9411/api/v2/spans
+    restart: always
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - discovery-server
+      - mysql-auth
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-auth:3306/auth_service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+    restart: always
+
+  product-service:
+    build: ./product-service
+    container_name: product-service
+    ports:
+      - "8089:8089"
+    depends_on:
+      - discovery-server
+      - mysql-product
+      - zipkin
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-product:3306/product_service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-ecommerce:9411/api/v2/spans
+    restart: always
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - discovery-server
+      - mysql-order
+      - kafka
+      - zipkin
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-order:3306/order_service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-ecommerce:9411/api/v2/spans
+    restart: always
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    ports:
+      - "8086:8086"
+    depends_on:
+      - discovery-server
+      - mysql-payment
+      - kafka
+      - zipkin
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-payment:3306/payment_service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin-ecommerce:9411/api/v2/spans
+    restart: always
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - discovery-server
+      - postgres-user
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-user:5432/user_service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - AWS_S3_REGION=${AWS_S3_REGION}
+      - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME}
+    restart: always
+
+  chatbot-service:
+    build: ./chatbot-service
+    container_name: chatbot-service
+    ports:
+      - "8087:8087"
+    depends_on:
+      - discovery-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+    restart: always
+
+  flashsale-service:
+    build: ./flashsale-service
+    container_name: flashsale-service
+    ports:
+      - "8008:8008"
+    depends_on:
+      - discovery-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+    restart: always
+
+  inventory-service:
+    build: ./inventory-service
+    container_name: inventory-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - discovery-server
+      - mysql-inventory
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-inventory:3306/inventory_service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+    restart: always
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      - discovery-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+    restart: always
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
+    restart: always
+
 volumes:
   product_data:
   user_data:
