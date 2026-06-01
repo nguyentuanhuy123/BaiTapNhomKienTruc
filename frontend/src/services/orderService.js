@@ -39,5 +39,15 @@ export const orderService = {
       console.error('Lỗi khi cập nhật phương thức thanh toán:', error);
       throw error;
     }
+  },
+
+  cancelOrder: async (orderId) => {
+    try {
+      const response = await axiosClient.put(`/api/order/${orderId}/cancel`);
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi hủy đơn hàng:', error);
+      throw error;
+    }
   }
 };

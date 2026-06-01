@@ -281,6 +281,55 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public void cancelOrder(Long orderId, Long userId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // Kiểm tra xem đơn hàng có đúng là của user đang request không
+        if (!order.getUserId().equals(userId)) {
+            throw new RuntimeException("You do not have permission to cancel this order");
+        }
+
+        OrderStatus previousStatus = order.getOrderStatus();
+
+        // 1. Nếu đơn hàng đã COMPLETED -> Không cho phép hủy
+        if (previousStatus == OrderStatus.COMPLETED) {
+            throw new RuntimeException("Cannot cancel a completed order");
+        }
+
+        // Nếu đơn hàng đã bị hủy trước đó rồi thì bỏ qua
+        if (previousStatus == OrderStatus.CANCELLED) {
+            return;
+        }
+
+        // Cập nhật trạng thái thành CANCELLED
+        order.setOrderStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+        System.out.println("User cancelled order: " + orderId);
+
+        // 2 & 3. Xử lý tồn kho dựa vào trạng thái trước khi hủy
+        String reason;
+        if (previousStatus == OrderStatus.PENDING) {
+            // PENDING: Chưa trừ tồn kho nên KHÔNG cần cộng lại
+            reason = "USER_CANCELLED_NO_RESTOCK";
+        } else if (previousStatus == OrderStatus.AWAITING_PAYMENT) {
+            // AWAITING_PAYMENT: Đã trừ tồn kho nên CẦN cộng lại
+            reason = "USER_CANCELLED_REQUIRES_RESTOCK";
+        } else {
+            reason = "USER_CANCELLED";
+        }
+
+        // Gửi sự kiện hủy đơn hàng
+        OrderCancelEvent event = new OrderCancelEvent(
+                order.getId(),
+                order.getUserId(),
+                mapOrderItems(order),
+                reason
+        );
+        orderEventProducer.publishOrderCancelledEvent(event);
+    }
+
+    @Override
     public void updateOrderStatus(Long orderId, OrderStatus status) {
         orderRepository.findById(orderId).ifPresent(order -> {
             OrderStatus previousStatus = order.getOrderStatus();

@@ -113,4 +113,19 @@ public class OrderController {
         log.info("Cannot Place Order Executing Fallback logic");
         return CompletableFuture.supplyAsync(() -> "Oops! Something went wrong, please order after some time!");
     }
+
+    @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Cancel my order")
+    @PutMapping("/{orderId}/cancel")
+    public ResponseEntity<String> cancelOrder(@PathVariable Long orderId) {
+        Long userId = (Long) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
+        try {
+            orderService.cancelOrder(orderId, userId);
+            return new ResponseEntity<>("Order cancelled successfully", HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
 }

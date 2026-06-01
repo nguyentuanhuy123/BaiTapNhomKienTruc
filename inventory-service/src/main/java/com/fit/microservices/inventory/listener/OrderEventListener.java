@@ -92,8 +92,8 @@ public class OrderEventListener {
 
         log.info("Nhận OrderCancelledEvent: {}", event);
 
-        if ("INVENTORY_FAILED".equals(event.getReason())) {
-            log.info("Order {} bị huỷ do lỗi kho, bỏ qua bước hoàn kho.", event.getOrderId());
+        if ("INVENTORY_FAILED".equals(event.getReason()) || "USER_CANCELLED_NO_RESTOCK".equals(event.getReason())) {
+            log.info("Order {} bị huỷ, bỏ qua bước hoàn kho. Lý do: {}", event.getOrderId(), event.getReason());
             return;
         }
 

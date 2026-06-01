@@ -8,6 +8,9 @@ const OrdersPage = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const tabs = ['All', 'Pending', 'Completed', 'Cancel'];
 
@@ -18,7 +21,8 @@ const OrdersPage = () => {
         const data = await orderService.getMyOrders();
         // Map backend order data to match the UI structure
         const formattedOrders = data.map(o => ({
-          id: o.orderNumber,
+          id: o.id,
+          orderNumber: o.orderNumber,
           date: dayjs(o.createdAt).format('MMM DD, YYYY'),
           status: getUIStatus(o.orderStatus),
           total: o.totalPrice,
@@ -58,6 +62,30 @@ const OrdersPage = () => {
   const filteredOrders = activeTab === 'All' 
     ? orders 
     : orders.filter(o => o.status === activeTab);
+
+  const handleOrderCancel = (order) => {
+    setOrderToCancel(order);
+    setIsCancelModalOpen(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!orderToCancel) return;
+    try {
+      setIsCancelling(true);
+      await orderService.cancelOrder(orderToCancel.id);
+      // Update the order status locally after cancellation
+      setOrders(prevOrders => prevOrders.map(o =>
+        o.id === orderToCancel.id ? { ...o, status: 'Cancel' } : o
+      ));
+      setIsCancelModalOpen(false);
+      setOrderToCancel(null);
+    } catch (error) {
+      console.error('Lỗi hủy đơn hàng:', error);
+      alert('Failed to cancel order: ' + (error.response?.data || error.message));
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50/50">
@@ -99,7 +127,7 @@ const OrdersPage = () => {
                   <div className="flex gap-8">
                     <div>
                       <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest mb-1">Order ID</p>
-                      <p className="font-bold text-zinc-900">{order.id}</p>
+                      <p className="font-bold text-zinc-900">{order.orderNumber || order.id}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest mb-1">Date</p>
@@ -133,7 +161,14 @@ const OrdersPage = () => {
                     <p className="text-[10px] font-black text-zinc-300 uppercase tracking-widest mb-1">Total Amount</p>
                     <p className="text-2xl font-black font-space-grotesk italic text-zinc-900 mb-6">${order.total ? order.total.toFixed(2) : '0.00'}</p>
                     <div className="flex gap-3 w-full md:w-auto">
-                      <button className="flex-1 md:flex-none px-6 py-3 bg-zinc-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all">Cancel</button>
+                      {order.status !== 'Completed' && order.status !== 'Cancel' && (
+                        <button
+                            onClick={() => handleOrderCancel(order)}
+                            className="flex-1 md:flex-none px-6 py-3 bg-zinc-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                        >
+                          Cancel
+                        </button>
+                      )}
                       <button 
                         onClick={() => window.location.href = `/orders/${order.id}`}
                         className="flex-1 md:flex-none px-6 py-3 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all"
@@ -153,6 +188,49 @@ const OrdersPage = () => {
           )}
         </div>
       </main>
+
+      {/* Cancel Modal */}
+      {isCancelModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-zinc-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-[0_20px_50px_rgba(0,0,0,0.1)] transform transition-all scale-100 opacity-100">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                <span className="material-symbols-outlined">warning</span>
+              </div>
+              <div>
+                <h3 className="text-xl font-space-grotesk font-black text-zinc-900 uppercase italic">Cancel Order</h3>
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Order ID: {orderToCancel?.orderNumber || orderToCancel?.id}</p>
+              </div>
+            </div>
+            <p className="text-sm text-zinc-500 mb-8 font-medium">
+              Are you sure you want to cancel this order? This action cannot be undone.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  setIsCancelModalOpen(false);
+                  setOrderToCancel(null);
+                }}
+                disabled={isCancelling}
+                className="flex-1 px-6 py-3 bg-zinc-100 text-zinc-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all disabled:opacity-50"
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={confirmCancel}
+                disabled={isCancelling}
+                className="flex-1 px-6 py-3 bg-red-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:scale-105 transition-all flex items-center justify-center disabled:opacity-50"
+              >
+                {isCancelling ? (
+                  <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
+                ) : (
+                  'Yes, Cancel'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
