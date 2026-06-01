@@ -67,11 +67,32 @@ jobs:
           cd BaiTapNhomKienTruc
           git pull origin develop
           echo "${{ secrets.AWS_S3_ENV }}" > .env
+          
+          echo "Stopping old containers..."
           docker compose down --remove-orphans
-          # Run Docker Compose in detached mode sequentially or with light footprint
-          docker compose up -d redis mysql-product postgres-user mysql-payment mysql-order mysql-auth zookeeper kafka kafka-ui prometheus grafana zipkin discovery-server mysql-inventory
+          
+          echo "Starting batch 1: Core Infra (Redis, Discovery Server)..."
+          docker compose up -d redis discovery-server
           sleep 15
-          docker compose up -d api-gateway auth-service user-service product-service inventory-service notification-service chatbot-service flashsale-service payment-service order-service
-          sleep 10
-          docker compose up -d frontend
+          
+          echo "Starting batch 2: Core Databases..."
+          docker compose up -d mysql-auth postgres-user mysql-product mysql-inventory
+          sleep 20
+          
+          echo "Starting batch 3: Secondary Databases & Messaging..."
+          docker compose up -d mysql-order mysql-payment zookeeper kafka
+          sleep 20
+          
+          echo "Starting batch 4: Core Services & Gateway..."
+          docker compose up -d api-gateway auth-service user-service
+          sleep 25
+          
+          echo "Starting batch 5: Main Business Services..."
+          docker compose up -d product-service inventory-service payment-service order-service
+          sleep 20
+          
+          echo "Starting batch 6: Supporting & Monitoring Services..."
+          docker compose up -d notification-service chatbot-service flashsale-service kafka-ui zipkin prometheus grafana frontend
+          
+          echo "Deployment initiated successfully!"
 
