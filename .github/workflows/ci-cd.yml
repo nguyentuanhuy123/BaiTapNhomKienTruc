@@ -96,9 +96,13 @@ jobs:
           docker compose up -d api-gateway auth-service user-service
           sleep 25
           
-          echo "Starting batch 5: Main Business Services..."
-          docker compose up -d product-service inventory-service payment-service order-service
-          sleep 20
+          echo "Starting batch 5: Product & Inventory Services..."
+          docker compose up -d product-service inventory-service
+          sleep 25
+          
+          echo "Starting batch 5.5: Payment & Order Services..."
+          docker compose up -d payment-service order-service
+          sleep 25
           
           echo "Starting batch 6: Supporting Services (Notification, Chatbot, Flashsale)..."
           docker compose up -d notification-service chatbot-service flashsale-service
