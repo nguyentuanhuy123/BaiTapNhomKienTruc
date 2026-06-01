@@ -46,3 +46,32 @@ jobs:
 
     - name: Build Frontend Application
       run: npm run build
+
+  # Job 3: Deploy to AWS EC2 via SSH
+  deploy:
+    needs: [build-backend, build-frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.AWS_HOST }}
+        username: ${{ secrets.AWS_USERNAME }}
+        key: ${{ secrets.AWS_SSH_KEY }}
+        port: 22
+        script: |
+          cd BaiTapNhomKienTruc
+          git pull origin develop
+          echo "${{ secrets.AWS_S3_ENV }}" > .env
+          docker compose down --remove-orphans
+          # Run Docker Compose in detached mode sequentially or with light footprint
+          docker compose up -d redis mysql-product postgres-user mysql-payment mysql-order mysql-auth zookeeper kafka kafka-ui prometheus grafana zipkin discovery-server mysql-inventory
+          sleep 15
+          docker compose up -d api-gateway auth-service user-service product-service inventory-service notification-service chatbot-service flashsale-service payment-service order-service
+          sleep 10
+          docker compose up -d frontend
+
