@@ -99,8 +99,7 @@ public class ReviewServiceImpl implements ReviewService {
                 review.getVerified(),
                 review.getImage(),
                 formatDate(review.getCreatedAt()),
-                replies
-        );
+                replies);
     }
 
     private ReviewReplyResponse mapToReviewReplyResponse(ReviewReply reply) {
@@ -108,12 +107,12 @@ public class ReviewServiceImpl implements ReviewService {
                 reply.getId(),
                 reply.getName(),
                 reply.getContent(),
-                formatDate(reply.getCreatedAt())
-        );
+                formatDate(reply.getCreatedAt()));
     }
 
     private String formatDate(LocalDateTime dateTime) {
-        if (dateTime == null) return "";
+        if (dateTime == null)
+            return "";
         return dateTime.format(DATE_FORMATTER);
     }
 }
