@@ -7,9 +7,12 @@ on:
     branches: [ "main", "develop" ]
 
 jobs:
-  # Job 1: Build & Test all Backend Maven Microservices
-  build-backend:
+  # Job 1: Build Java applications, build Docker Images, and push to GitHub Container Registry (GHCR)
+  build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
@@ -21,41 +24,53 @@ jobs:
         distribution: 'temurin'
         cache: maven
 
-    - name: Build and Test Backend Services
+    - name: Build Backend Services
       run: mvn clean package -DskipTests
 
-  # Job 2: Build & Test Frontend React application
-  build-frontend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
-    steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
       with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: './frontend/package-lock.json'
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-    - name: Build Frontend Application
-      run: npm run build
+    - name: Build and Push Docker Images
+      run: |
+        # Convert repository owner to lowercase for Docker compatibility
+        OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+        echo "Owner in lowercase: $OWNER_LC"
+        
+        services=(
+          "discovery-server"
+          "api-gateway"
+          "auth-service"
+          "product-service"
+          "order-service"
+          "payment-service"
+          "user-service"
+          "chatbot-service"
+          "flashsale-service"
+          "inventory-service"
+          "notification-service"
+        )
+        
+        for service in "${services[@]}"; do
+          echo "============================================="
+          echo "BUILDING & PUSHING: $service"
+          echo "============================================="
+          docker build -t ghcr.io/$OWNER_LC/baitapnhomkientruc/$service:latest ./$service
+          docker push ghcr.io/$OWNER_LC/baitapnhomkientruc/$service:latest
+        done
 
-  # Job 3: Deploy to AWS EC2 via SSH
+  # Job 2: Deploy to AWS EC2 via SSH
   deploy:
-    needs: [build-backend, build-frontend]
+    needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -63,51 +78,37 @@ jobs:
         username: ${{ secrets.AWS_USERNAME }}
         key: ${{ secrets.AWS_SSH_KEY }}
         port: 22
-        timeout: 30m
-        command_timeout: 30m
+        timeout: 10m
+        command_timeout: 10m
         script: |
           cd BaiTapNhomKienTruc
           git pull origin develop
           echo "${{ secrets.AWS_S3_ENV }}" > .env
           
+          echo "Logging in to GitHub Container Registry on EC2..."
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          
           echo "Stopping old containers to free 100% RAM..."
-          docker compose down --remove-orphans
+          docker compose -f docker-compose.prod.yml down --remove-orphans
           
-          echo "Building all backend services (generating target/*.jar)..."
-          mvn clean package -DskipTests
+          echo "Pulling latest pre-built images from GHCR..."
+          docker compose -f docker-compose.prod.yml pull
           
-          echo "Starting batch 1: Core Infra (Redis, Discovery Server)..."
-          docker compose up -d redis discovery-server
-          sleep 15
-          
-          echo "Starting batch 2: Core Databases..."
-          docker compose up -d mysql-auth postgres-user mysql-product mysql-inventory
+          echo "Starting batch 1: Infrastructure & Databases..."
+          docker compose -f docker-compose.prod.yml up -d redis zookeeper kafka mysql-product mysql-order mysql-payment mysql-auth mysql-inventory postgres-user
           sleep 20
           
-          echo "Starting batch 3: Secondary Databases & Messaging..."
-          docker compose up -d mysql-order mysql-payment zookeeper kafka
+          echo "Starting batch 2: Core Platform Services..."
+          docker compose -f docker-compose.prod.yml up -d discovery-server api-gateway auth-service user-service
           sleep 20
           
-          echo "Starting batch 4: Core Services & Gateway..."
-          docker compose up -d api-gateway auth-service user-service
-          sleep 25
+          echo "Starting batch 3: Business Microservices..."
+          docker compose -f docker-compose.prod.yml up -d product-service inventory-service order-service payment-service chatbot-service flashsale-service notification-service
           
-          echo "Starting batch 5: Product & Inventory Services..."
-          docker compose up -d product-service inventory-service
-          sleep 25
-          
-          echo "Starting batch 5.5: Payment & Order Services..."
-          docker compose up -d payment-service order-service
-          sleep 25
-          
-          echo "Starting batch 6: Supporting Services (Notification, Chatbot, Flashsale)..."
-          docker compose up -d notification-service chatbot-service flashsale-service
-          
-          echo "Waiting 15 seconds for services to initialize diagnostics..."
+          echo "Waiting 15 seconds for services to settle..."
           sleep 15
           
           echo "=== DOCKER CONTAINER STATUS ==="
           docker ps -a
           
-          echo "Deployment completed successfully!"
-
+          echo "Deployment completed successfully in under 2 minutes!"

@@ -1,0 +1,284 @@
+version: '3.9'
+services:
+  # Databases & Infrastructures
+  mysql-product:
+    image: mysql:8.3.0
+    container_name: mysql-product
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: product_service
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - product_data:/var/lib/mysql
+    restart: always
+
+  mysql-order:
+    image: mysql:8.3.0
+    container_name: mysql-order
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: order_service
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+    ports:
+      - "3307:3306"
+    volumes:
+      - order_data:/var/lib/mysql
+    restart: always
+
+  mysql-payment:
+    image: mysql:8.3.0
+    container_name: mysql-payment
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: payment_service
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+    ports:
+      - "3310:3306"
+    volumes:
+      - payment_data:/var/lib/mysql
+    restart: always
+
+  mysql-auth:
+    image: mysql:8.3.0
+    container_name: mysql-auth
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: auth_service
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+    ports:
+      - "3309:3306"
+    volumes:
+      - auth_data:/var/lib/mysql
+    restart: always
+
+  mysql-inventory:
+    image: mysql:8.3.0
+    container_name: mysql-inventory
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: inventory_service
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+    ports:
+      - "3308:3306"
+    volumes:
+      - inventory_data:/var/lib/mysql
+    restart: always
+
+  postgres-user:
+    image: postgres:15
+    container_name: postgres-user
+    environment:
+      POSTGRES_DB: user_service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - user_data:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7
+    container_name: redis-ecommerce
+    ports:
+      - "6379:6379"
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper-ecommerce
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.4
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  # ==========================================
+  # APPLICATION MICROSERVICES (PRE-BUILT IMAGES FROM GHCR)
+  # ==========================================
+
+  discovery-server:
+    image: ghcr.io/nguyentuanhuy123/baitapnhomkientruc/discovery-server:latest
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    environment:
+      - EUREKA_INSTANCE_HOSTNAME=discovery-server
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
+    restart: always
+
+  api-gateway:
+    image: ghcr.io/nguyentuanhuy123/baitapnhomkientruc/api-gateway:latest
+    container_name: api-gateway
+    ports:
+      - "9000:9000"
+    depends_on:
+      - discovery-server
+      - redis
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_DATA_REDIS_HOST=redis-ecommerce
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
+    restart: always
+
+  auth-service:
+    image: ghcr.io/nguyentuanhuy123/baitapnhomkientruc/auth-service:latest
+    container_name: auth-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - discovery-server
+      - mysql-auth
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-auth:3306/auth_service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
+    restart: always
+
+  product-service:
+    image: ghcr.io/nguyentuanhuy123/baitapnhomkientruc/product-service:latest
+    container_name: product-service
+    ports:
+      - "8089:8089"
+    depends_on:
+      - discovery-server
+      - mysql-product
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-product:3306/product_service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
+    restart: always
+
+  order-service:
+    image: ghcr.io/nguyentuanhuy123/baitapnhomkientruc/order-service:latest
+    container_name: order-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - discovery-server
+      - mysql-order
+      - kafka
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-order:3306/order_service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
+    restart: always
+
+  payment-service:
+    image: ghcr.io/nguyentuanhuy123/baitapnhomkientruc/payment-service:latest
+    container_name: payment-service
+    ports:
+      - "8086:8086"
+    depends_on:
+      - discovery-server
+      - mysql-payment
+      - kafka
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-payment:3306/payment_service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
+    restart: always
+
+  user-service:
+    image: ghcr.io/nguyentuanhuy123/baitapnhomkientruc/user-service:latest
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - discovery-server
+      - postgres-user
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-user:5432/user_service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - AWS_S3_REGION=${AWS_S3_REGION}
+      - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME}
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
+    restart: always
+
+  chatbot-service:
+    image: ghcr.io/nguyentuanhuy123/baitapnhomkientruc/chatbot-service:latest
+    container_name: chatbot-service
+    ports:
+      - "8087:8087"
+    depends_on:
+      - discovery-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
+    restart: always
+
+  flashsale-service:
+    image: ghcr.io/nguyentuanhuy123/baitapnhomkientruc/flashsale-service:latest
+    container_name: flashsale-service
+    ports:
+      - "8008:8008"
+    depends_on:
+      - discovery-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
+    restart: always
+
+  inventory-service:
+    image: ghcr.io/nguyentuanhuy123/baitapnhomkientruc/inventory-service:latest
+    container_name: inventory-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - discovery-server
+      - mysql-inventory
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-inventory:3306/inventory_service
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
+    restart: always
+
+  notification-service:
+    image: ghcr.io/nguyentuanhuy123/baitapnhomkientruc/notification-service:latest
+    container_name: notification-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      - discovery-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka
+      - JDK_JAVA_OPTIONS=-Xms128m -Xmx256m
+    restart: always
+
+volumes:
+  product_data:
+  user_data:
+  order_data:
+  inventory_data:
+  auth_data:
+  payment_data:
+
+networks:
+  default:
+    name: microservices-network
