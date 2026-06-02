@@ -17,4 +17,5 @@ public interface OrderService {
     List<OrderResponse> getAllOrders();
     List<OrderResponse> getMyOrders(Long userId);
     boolean hasPurchasedProduct(Long userId, String skuCode);
+    void cancelOrder(Long orderId, Long userId);
 }
