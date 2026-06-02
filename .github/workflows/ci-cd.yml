@@ -63,6 +63,8 @@ jobs:
         username: ${{ secrets.AWS_USERNAME }}
         key: ${{ secrets.AWS_SSH_KEY }}
         port: 22
+        timeout: 30m
+        command_timeout: 30m
         script: |
           cd BaiTapNhomKienTruc
           git pull origin develop
