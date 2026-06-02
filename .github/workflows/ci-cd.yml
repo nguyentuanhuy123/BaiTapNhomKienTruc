@@ -83,8 +83,7 @@ jobs:
         script: |
           cd BaiTapNhomKienTruc
           git fetch origin
-          git checkout develop
-          git pull origin develop
+          git reset --hard origin/develop
           echo "${{ secrets.AWS_S3_ENV }}" > .env
           
           echo "Logging in to GitHub Container Registry on EC2..."
